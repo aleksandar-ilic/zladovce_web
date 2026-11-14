@@ -249,7 +249,7 @@ ZLADOVCE_API_BASE_URL=https://api.example.com/api/v1 ZLADOVCE_SITE_URL=https://z
   after a successful order or `409 IDEMPOTENCY_KEY_REUSED`. A second submit while one is running is ignored.
 - **After success** the confirmation is stored in `sessionStorage` (the confirmation page survives a reload), the form draft
   is removed and only then the cart is cleared. Nothing personal is written to `localStorage`; the form draft lives in
-  `sessionStorage` of the tab only. No tracking code is shown until Phase 6.
+  `sessionStorage` of the tab only. The tracking code is added in Phase 6 (below).
 - Shop sort `bestselling` ("Najprodavanije").
 
 ### Admin
@@ -269,6 +269,57 @@ ZLADOVCE_API_BASE_URL=https://api.example.com/api/v1 ZLADOVCE_SITE_URL=https://z
   (= now on the server), an earlier day as noon Europe/Belgrade, never before the order.
 - `applyServerErrors` moved to `@zladovce/shared` (the admin's `shared/server-errors.ts` re-exports it).
 - `ApiError` now keeps the whole problem body (`extension('quote')`, `extension('allowedNextStatuses')`) and `retryAfterSeconds`.
+
+## Tracking and notifications (Phase 6)
+
+### Storefront
+
+| Page | Route | Rendering |
+|---|---|---|
+| Praćenje porudžbine | `/track-order` (canonical, used by the email links) | Client only, `noindex`, disallowed in `robots.txt`, never in the sitemap |
+| (alias) | `/pracenje-porudzbine` | Router redirect to `/track-order`; the fragment `#kod=…` is kept. Also client only and disallowed |
+
+- **Tracking page** (`features/tracking`). One field "Kod za praćenje" that formats while typing (letters and digits,
+  upper case, groups `XXXXX-XXXXX-XXXXX-XXXXX-XXXXXX`, at most 26 characters) and keeps the caret where it was
+  (`caretAfterFormat`). `O`/`I`/`L` are left to the server, which normalises them. An incomplete code is explained without
+  a request. `POST /tracking/lookup { code }` → order number, current status (large), order date, the real timeline
+  (oldest first, Serbian date/time in Europe/Belgrade, customer message), shipment card (courier, courier tracking number,
+  shipped date, external link with `target="_blank" rel="noopener noreferrer"`) and "Proveri drugi kod". The result region
+  is `aria-live="polite"` and focus moves to its heading; errors are `role="alert"`.
+- **Errors.** `404 TRACKING_NOT_FOUND` (unknown, revoked and malformed codes alike) → always the same text "Nismo
+  pronašli porudžbinu sa ovim kodom. …"; `429` → wait text from `Retry-After`, button disabled for that time; network → "Nema
+  veze sa serverom".
+- **Code in the URL fragment.** Email links are `/track-order#kod=<code>`. The page reads the fragment through the router
+  (`ActivatedRoute.fragment`, i.e. `location.hash`), immediately replaces the history entry without it
+  (`router.navigate([], { replaceUrl: true })` → `history.replaceState`), then sends the code in the POST body. The code
+  is never put in a query string, never logged and never sent to analytics (there is none). Other fragments are left alone.
+- **Confirmation page** shows the code from the 201 response large, with "Kopiraj kod" (Clipboard API, fallback hidden
+  textarea + `execCommand('copy')`, last resort: the code is selected for manual copying; result announced in a
+  `role="status"` line), explains that it is also in the email and links "Prati porudžbinu" to `/track-order#kod=…`. A 200
+  replay of the same submission returns `trackingCode: null`; the code already stored for the same order number is kept,
+  otherwise the page points to the email.
+- **Why sessionStorage is acceptable for the code.** The code is a bearer secret for status/timeline/courier data only (no
+  name, address, phone or items). It sits in the confirmation that already lived in `sessionStorage`: one tab, gone when
+  the tab is closed, not shared with other tabs, not sent to any server, and the same origin can only read it with script
+  already running on the page (which could read the screen anyway). That gives "survives a reload of the confirmation
+  page" without keeping the code around: `localStorage` is never used because it would outlive the tab and stay readable
+  for whoever uses the browser later.
+- Navigation: "Praćenje porudžbine" in the header (desktop and mobile menu) and footer. Homepage "Kako poručiti" step 3
+  mentions tracking with the code from the confirmation email.
+
+### Admin
+
+| Page | Route | Who |
+|---|---|---|
+| E-poruke | `/e-poruke` | Owner, Staff. Outbox list, newest first. Status filter (toggle buttons; default "Čeka slanje" + "Neuspešno" = what needs attention; "Sve"), `orderId`, paging – all in the URL (`status=Pending,Dead` / `status=all`, `orderId`, `page`, `pageSize`). Row: template, status, order number (link), recipient, attempts, created/sent, last error in plain words. The whole row opens the detail dialog (stretched "Detalji" button) with the attempt log; "Ponovo pošalji" for Dead (row and dialog). |
+| Porudžbina | `/porudzbine/:id` | New card "E-poruke": the order's emails (template, status badge, attempts, sent time, plain-words error for Dead and Pending-with-error, next attempt), "Ponovo pošalji" only for Dead, "Pošalji potvrdu ponovo" (confirmation: a new code is emailed, older codes keep working), "Poništi kodove za praćenje" (AdminAny like the API, red confirmation: old codes stop working; afterwards a notice suggests resending the confirmation). The order is reloaded after each action. |
+| Kontrolna tabla | `/` | Warning card while Dead emails exist, linking to `/e-poruke?status=Dead`. |
+
+- `Poller` (`core/polling.ts`) is the one polling mechanism: every 60 s, after navigation (skipped within 2 s), `refresh(true)`
+  after changes, requests never overlap, a failure keeps the last value. `OrderSummaryStore` and the new `DeadEmailsStore`
+  (`GET /admin/emails?status=Dead&pageSize=1` → `totalItems`, the "E-poruke" menu badge and the dashboard card) both use it.
+- Labels: `shared/email-labels.ts` (templates, statuses "Čeka slanje" / "Šalje se" / "Poslato" / "Neuspešno", plain-words
+  errors, Serbian plurals).
 
 ## Admin catalog (Phase 3)
 

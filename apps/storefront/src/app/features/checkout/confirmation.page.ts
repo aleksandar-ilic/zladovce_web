@@ -4,15 +4,17 @@ import { paymentMethodLabel } from '@zladovce/shared';
 import { UiButton, UiCard, UiEmptyState } from '@zladovce/ui';
 import { RsdPipe, SrDatePipe } from '@zladovce/utilities';
 import { CheckoutSession } from './checkout-session';
+import { TrackingCodeCard } from './tracking-code-card';
 
 /**
  * Porudžbina primljena (`/porudzbina-primljena`, client only, noindex): the order the API just
- * confirmed, read from sessionStorage so a reload shows it again. Order tracking codes come with
- * Phase 6 (`trackingCode` is null until then), so no tracking code or link is shown.
+ * confirmed, read from sessionStorage so a reload in the same tab shows it again, together with
+ * the tracking code (copy button, link `/track-order#kod=…`). The code is shown only here and in
+ * the confirmation email.
  */
 @Component({
   selector: 'sf-confirmation-page',
-  imports: [RouterLink, RsdPipe, SrDatePipe, UiButton, UiCard, UiEmptyState],
+  imports: [RouterLink, RsdPipe, SrDatePipe, TrackingCodeCard, UiButton, UiCard, UiEmptyState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mx-auto max-w-3xl px-gutter pb-section pt-10 md:pt-14">
@@ -34,6 +36,8 @@ import { CheckoutSession } from './checkout-session';
             hteli da nas pitate nešto o njoj.
           </p>
         </div>
+
+        <sf-tracking-code-card class="mt-8" [code]="o.trackingCode" />
 
         <section class="mt-10" aria-labelledby="sf-next-steps">
           <h2 id="sf-next-steps" class="text-3xl">Šta sledi</h2>

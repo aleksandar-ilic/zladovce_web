@@ -19,6 +19,8 @@ import { adminRoleLabel } from '@zladovce/shared';
 import { UiBadge } from '@zladovce/ui';
 import { map } from 'rxjs';
 import { ADMIN_NAV } from '../navigation';
+import { deadEmailsText } from '../../shared/email-labels';
+import { DeadEmailsStore } from '../dead-emails';
 import { OrderSummaryStore } from '../order-summary';
 
 const DESKTOP = '(min-width: 1024px)';
@@ -103,6 +105,13 @@ const DESKTOP = '(min-width: 1024px)';
                       ></span
                     >
                   }
+                  @if (item.badge === 'deadEmails' && deadEmails() > 0) {
+                    <span
+                      class="inline-flex min-w-6 items-center justify-center rounded-full bg-danger-600 px-1.5 py-0.5 text-xs font-bold text-white"
+                      data-testid="nav-badge-emails"
+                      >{{ deadEmails() }}<span class="sr-only"> {{ deadEmailsWords() }}</span></span
+                    >
+                  }
                 </span>
               </a>
             }
@@ -176,6 +185,12 @@ export class Shell {
   private readonly orderSummary = inject(OrderSummaryStore);
   /** New orders (Received) for the "Porudžbine" badge; refreshed every minute and on navigation. */
   protected readonly receivedOrders = this.orderSummary.received;
+  private readonly deadEmailsStore = inject(DeadEmailsStore);
+  /** Emails that could not be sent, for the "E-poruke" badge; same refresh as the orders badge. */
+  protected readonly deadEmails = computed(() => this.deadEmailsStore.count() ?? 0);
+  protected readonly deadEmailsWords = computed(() =>
+    deadEmailsText(this.deadEmails()).replace(/^\d+ /, ''),
+  );
   protected readonly profile = this.auth.profile;
   protected readonly user = this.auth.user;
   protected readonly roleLabel = computed(() => adminRoleLabel(this.auth.role()));
@@ -186,7 +201,9 @@ export class Shell {
 
   constructor() {
     void this.auth.loadProfile();
-    this.orderSummary.start(inject(DestroyRef));
+    const destroyRef = inject(DestroyRef);
+    this.orderSummary.start(destroyRef);
+    this.deadEmailsStore.start(destroyRef);
 
     // The session can end at any time (sign-out, expired token, deactivated account).
     effect(() => {

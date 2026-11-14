@@ -12,6 +12,7 @@ import { AuthService } from '@zladovce/auth';
 import { adminRoleLabel } from '@zladovce/shared';
 import { UiBadge, UiCard, UiCardTitle, UiErrorState, UiLoadingState } from '@zladovce/ui';
 import { SrDatePipe } from '@zladovce/utilities';
+import { DeadEmailsCard } from './dead-emails-card';
 import { LowStockCard } from './low-stock-card';
 import { OrdersCard } from './orders-card';
 
@@ -33,6 +34,7 @@ type HealthState =
     UiLoadingState,
     UiErrorState,
     SrDatePipe,
+    DeadEmailsCard,
     LowStockCard,
     OrdersCard,
   ],
@@ -41,6 +43,7 @@ type HealthState =
     <h1 class="text-3xl">Kontrolna tabla</h1>
 
     <div class="mt-6 grid max-w-5xl gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <adm-dead-emails-card />
       <adm-orders-card />
       <adm-low-stock-card />
 

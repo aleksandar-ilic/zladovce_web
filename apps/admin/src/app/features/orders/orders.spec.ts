@@ -823,7 +823,10 @@ describe('OrderDetailPage', () => {
         },
       }),
     );
-    await ctx.render();
+    // The dialog reports its result after the close animation; wait for it instead of a fixed count.
+    for (let i = 0; i < 10 && !ctx.root.querySelector('[data-testid="collected-amount"]'); i++) {
+      await ctx.render();
+    }
     expect(text(ctx.root.querySelector('[data-testid="collected-amount"]'))).toBe('1.650 RSD');
     expect(ctx.root.querySelector('[data-testid="clear-payment"]')).not.toBeNull();
   });

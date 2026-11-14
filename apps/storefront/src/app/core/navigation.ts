@@ -8,6 +8,9 @@ export interface NavItem {
 
 export const SHOP_PATH = '/prodavnica';
 
+/** Order tracking: the canonical path of the email links (`/pracenje-porudzbine` redirects here). */
+export const TRACKING_PATH = '/track-order';
+
 /**
  * Main navigation, used by the header and the mobile drawer. "Prodavnica" also opens the
  * category menu (real categories from the API). About, blog and contact are added in the
@@ -16,6 +19,7 @@ export const SHOP_PATH = '/prodavnica';
 export const MAIN_NAV: readonly NavItem[] = [
   { label: 'Početna', path: '/', exact: true },
   { label: 'Prodavnica', path: SHOP_PATH },
+  { label: 'Praćenje porudžbine', path: TRACKING_PATH },
 ];
 
 /** Footer links. Legal and informational pages are added here when they exist. */

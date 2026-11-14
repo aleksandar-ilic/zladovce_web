@@ -20,6 +20,7 @@ import { buildOrderRequest, rateLimitProblem, waitText } from './checkout-form';
 import {
   CHECKOUT_DRAFT_STORAGE,
   CHECKOUT_KEY_STORAGE,
+  CheckoutSession,
   CONFIRMATION_STORAGE,
   readPlacedOrder,
 } from './checkout-session';
@@ -45,6 +46,8 @@ const ORDER: PlacedOrder = {
   paymentMethod: 'CashOnDelivery',
   trackingCode: null,
 };
+
+const TRACKING_CODE = 'ABCDE-12345-FGHJK-67890-MNPQRS';
 
 const VALID: Record<string, string> = {
   firstName: 'Milica',
@@ -161,8 +164,24 @@ describe('checkout helpers', () => {
     expect(rateLimitProblem(300).messages[0]).toContain('Sačekajte oko 5 minuta');
   });
 
+  it('keeps the tracking code in sessionStorage only, also when a repeated submission returns none', () => {
+    TestBed.configureTestingModule({ providers: testProviders() });
+    const session = TestBed.inject(CheckoutSession);
+    session.saveConfirmation({ ...ORDER, trackingCode: TRACKING_CODE });
+    expect(session.readConfirmation()?.trackingCode).toBe(TRACKING_CODE);
+    // 200 replay of the same submission: the code is not sent again.
+    session.saveConfirmation({ ...ORDER, trackingCode: null });
+    expect(session.readConfirmation()?.trackingCode).toBe(TRACKING_CODE);
+    // A different order never inherits the code.
+    session.saveConfirmation({ ...ORDER, orderNumber: 'ZLD-2026-000043', trackingCode: null });
+    expect(session.readConfirmation()?.trackingCode).toBeNull();
+    expect(localStorage.length).toBe(0);
+    expect(sessionStorage.getItem(CONFIRMATION_STORAGE)).toContain('ZLD-2026-000043');
+  });
+
   it('reads only a well-formed stored confirmation', () => {
     expect(readPlacedOrder(ORDER)).toEqual(ORDER);
+    expect(readPlacedOrder({ ...ORDER, trackingCode: 42 })?.trackingCode).toBeNull();
     expect(readPlacedOrder({ orderNumber: 'x' })).toBeNull();
     expect(readPlacedOrder(null)).toBeNull();
   });
@@ -485,7 +504,7 @@ describe('CheckoutPage', () => {
 });
 
 describe('ConfirmationPage', () => {
-  it('shows the stored order after a reload, without a tracking code', async () => {
+  it('shows the stored order after a reload and points to the email when no code came back', async () => {
     sessionStorage.setItem(CONFIRMATION_STORAGE, JSON.stringify(ORDER));
     const ctx = await open('/porudzbina-primljena');
     await ctx.render();
@@ -495,7 +514,87 @@ describe('ConfirmationPage', () => {
     expect(text(ctx.el('total'))).toBe('1.530 RSD');
     expect(text(ctx.el('payment-method'))).toBe('Plaćanje pouzećem');
     expect(nb(text(ctx.el('next-steps')))).toContain('iznos od 1.530 RSD plaćate kuriru');
-    expect(text(ctx.root())).not.toMatch(/praćenj|kod za/i);
+    expect(text(ctx.el('tracking-code-in-email'))).toContain(
+      'Kod za praćenje smo poslali u e-poruci',
+    );
+    expect(ctx.el('tracking-code-value')).toBeNull();
+    expect(ctx.el('copy-tracking-code')).toBeNull();
+    expect(ctx.el('tracking-code-in-email')?.querySelector('a')?.getAttribute('href')).toBe(
+      '/track-order',
+    );
+  });
+
+  it('shows the tracking code with a copy button and the tracking link (fragment, not query)', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+    try {
+      sessionStorage.setItem(
+        CONFIRMATION_STORAGE,
+        JSON.stringify({ ...ORDER, trackingCode: TRACKING_CODE }),
+      );
+      const ctx = await open('/porudzbina-primljena');
+      await ctx.render();
+      expect(text(ctx.el('tracking-code-value'))).toBe(TRACKING_CODE);
+      expect(text(ctx.el('tracking-code-card'))).toContain('Poslali smo ga i u e-poruci potvrde');
+      const link = ctx.el<HTMLAnchorElement>('track-order-link')!;
+      expect(link.getAttribute('href')).toBe(`/track-order#kod=${TRACKING_CODE}`);
+      expect(link.getAttribute('href')).not.toContain('?');
+      expect(text(link)).toBe('Prati porudžbinu');
+
+      ctx.el<HTMLButtonElement>('copy-tracking-code')!.click();
+      await ctx.render();
+      expect(writeText).toHaveBeenCalledWith(TRACKING_CODE);
+      expect(text(ctx.el('copy-status'))).toBe('Kod je kopiran.');
+      expect(ctx.el('copy-status')?.getAttribute('role')).toBe('status');
+      expect(text(ctx.el('copy-tracking-code'))).toBe('Kopirano');
+
+      // Only this tab's sessionStorage holds the code; nothing in localStorage.
+      expect(JSON.stringify({ ...localStorage })).not.toContain(TRACKING_CODE);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('follows the link to the tracking page, which sends the code and clears the fragment', async () => {
+    sessionStorage.setItem(
+      CONFIRMATION_STORAGE,
+      JSON.stringify({ ...ORDER, trackingCode: TRACKING_CODE }),
+    );
+    const ctx = await open('/porudzbina-primljena');
+    await ctx.render();
+    ctx.el<HTMLAnchorElement>('track-order-link')!.click();
+    await ctx.render();
+    const request = ctx.http.expectOne(`${API}/tracking/lookup`);
+    expect(request.request.body).toEqual({ code: TRACKING_CODE });
+    expect(TestBed.inject(Router).url).toBe('/track-order');
+  });
+
+  it('falls back to execCommand when the Clipboard API is missing, and selects the code when that fails too', async () => {
+    vi.stubGlobal('navigator', { ...navigator, clipboard: undefined });
+    const exec = vi.fn().mockReturnValue(true);
+    Object.defineProperty(document, 'execCommand', { value: exec, configurable: true });
+    try {
+      sessionStorage.setItem(
+        CONFIRMATION_STORAGE,
+        JSON.stringify({ ...ORDER, trackingCode: TRACKING_CODE }),
+      );
+      const ctx = await open('/porudzbina-primljena');
+      await ctx.render();
+      ctx.el<HTMLButtonElement>('copy-tracking-code')!.click();
+      await ctx.render();
+      expect(exec).toHaveBeenCalledWith('copy');
+      expect(text(ctx.el('copy-status'))).toBe('Kod je kopiran.');
+      expect(document.querySelector('textarea[aria-hidden="true"]')).toBeNull();
+
+      exec.mockReturnValue(false);
+      ctx.el<HTMLButtonElement>('copy-tracking-code')!.click();
+      await ctx.render();
+      expect(text(ctx.el('copy-status'))).toContain('Kopiranje nije uspelo');
+      expect(document.getSelection()?.toString().trim()).toBe(TRACKING_CODE);
+    } finally {
+      vi.unstubAllGlobals();
+      delete (document as { execCommand?: unknown }).execCommand;
+    }
   });
 
   it('explains when there is nothing to show', async () => {

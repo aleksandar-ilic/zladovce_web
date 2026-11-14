@@ -86,9 +86,29 @@ export interface paths {
         put?: never;
         /**
          * Place an order (cash on delivery). 201 new order; 200 replay of the same request with the same Idempotency-Key.
-         * @description Header `Idempotency-Key` (UUID) is required: generate it once when the checkout page opens and send the same key with every retry of that submission. Only a successful order uses up the key; after a 409/400 the same key may be sent again with the corrected cart. A request with a used key and the same content returns the original order (200, `trackingCode` null); with different content 409 IDEMPOTENCY_KEY_REUSED. Prices, shipping and totals are computed from the database with the rules of the cart quote; stock is deducted at once. `trackingCode` is always null until tracking codes are introduced (Phase 6). Errors: 400 VALIDATION_FAILED (field paths such as `customer.phone`, `address.postalCode`, `items[0].quantity`, `acceptedTerms`, `idempotencyKey`), BAD_REQUEST (malformed JSON); 409 with the fresh quote in `quote`: CART_CHANGED (a line unavailable or reduced, `knownUnitPrice` or `expectedTotal` differs; `errors` names the lines), INSUFFICIENT_STOCK (stock taken meanwhile; `errors["items[i].quantity"]`), MINIMUM_ORDER_NOT_MET, SHIPPING_DISABLED; 409 IDEMPOTENCY_KEY_REUSED; 429 RATE_LIMITED (5 per 10 minutes per IP, `Retry-After` header in seconds).
+         * @description Header `Idempotency-Key` (UUID) is required: generate it once when the checkout page opens and send the same key with every retry of that submission. Only a successful order uses up the key; after a 409/400 the same key may be sent again with the corrected cart. A request with a used key and the same content returns the original order (200, `trackingCode` null); with different content 409 IDEMPOTENCY_KEY_REUSED. Prices, shipping and totals are computed from the database with the rules of the cart quote; stock is deducted at once. `trackingCode` (201 only) is the internal tracking code `XXXXX-XXXXX-XXXXX-XXXXX-XXXXXX`, shown once; it is also sent in the confirmation email. Errors: 400 VALIDATION_FAILED (field paths such as `customer.phone`, `address.postalCode`, `items[0].quantity`, `acceptedTerms`, `idempotencyKey`), BAD_REQUEST (malformed JSON); 409 with the fresh quote in `quote`: CART_CHANGED (a line unavailable or reduced, `knownUnitPrice` or `expectedTotal` differs; `errors` names the lines), INSUFFICIENT_STOCK (stock taken meanwhile; `errors["items[i].quantity"]`), MINIMUM_ORDER_NOT_MET, SHIPPING_DISABLED; 409 IDEMPOTENCY_KEY_REUSED; 429 RATE_LIMITED (5 per 10 minutes per IP, `Retry-After` header in seconds).
          */
         post: operations["CreateOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tracking/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Status, timeline and courier data of the order with this tracking code.
+         * @description Body `{ "code": "…" }`. The code has 26 Crockford Base32 characters, shown as `XXXXX-XXXXX-XXXXX-XXXXX-XXXXXX`; hyphens and spaces are optional, case is ignored, `O` counts as `0` and `I`/`L` as `1`. The page takes it from the email link `/track-order#kod=<code>` (URL fragment) and sends it here in the body — never in a URL. The response has no name, address, phone, email, items or internal notes. Errors: 404 TRACKING_NOT_FOUND — the same body for unknown, revoked and malformed codes; 400 VALIDATION_FAILED only when `code` is missing from the body; 429 RATE_LIMITED (10 per 10 minutes per IP, plus a global cap; `Retry-After` in seconds).
+         */
+        post: operations["LookupTracking"];
         delete?: never;
         options?: never;
         head?: never;
@@ -699,7 +719,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Order detail: contact, address, items, totals, payment, timeline, notes, shipments and the allowed next statuses.
+         * Order detail: contact, address, items, totals, payment, timeline, notes, shipments, emails and the allowed next statuses.
          * @description Errors: 404 NOT_FOUND.
          */
         get: operations["GetAdminOrder"];
@@ -722,7 +742,7 @@ export interface paths {
         put?: never;
         /**
          * Move the order to the next status (P1.5). Returns the updated order.
-         * @description Allowed: Received → Accepted | Rejected | Cancelled; Accepted → Preparing | Cancelled; Preparing → Shipped | Cancelled; Shipped → Delivered | DeliveryFailed; DeliveryFailed → Shipped | Cancelled; Delivered, Cancelled, Rejected are final. Shipped requires `shipment` (active courier; tracking number, date (default now), note optional). Stock returns automatically on Rejected and on Cancelled before shipping; cancelling after DeliveryFailed requires `restock` (true = goods back on stock). History, shipment, stock movements and audit are one transaction. Errors: 400 VALIDATION_FAILED (`shipment`, `shipment.courierCompanyId`, `shipment.shippedAt`, `restock`); 404 NOT_FOUND; 409 INVALID_STATUS_TRANSITION (with `allowedNextStatuses`), CONCURRENT_EDIT (stale `version`).
+         * @description Allowed: Received → Accepted | Rejected | Cancelled; Accepted → Preparing | Cancelled; Preparing → Shipped | Cancelled; Shipped → Delivered | DeliveryFailed; DeliveryFailed → Shipped | Cancelled; Delivered, Cancelled, Rejected are final. Shipped requires `shipment` (active courier; tracking number, date (default now), note optional). Stock returns automatically on Rejected and on Cancelled before shipping; cancelling after DeliveryFailed requires `restock` (true = goods back on stock). History, shipment, stock movements, audit and the customer email (P1.7: every target except DeliveryFailed; Rejected uses the cancellation email; `customerMessage` is included) are one transaction. Errors: 400 VALIDATION_FAILED (`shipment`, `shipment.courierCompanyId`, `shipment.shippedAt`, `restock`); 404 NOT_FOUND; 409 INVALID_STATUS_TRANSITION (with `allowedNextStatuses`), CONCURRENT_EDIT (stale `version`).
          */
         post: operations["ChangeAdminOrderStatus"];
         delete?: never;
@@ -860,6 +880,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Outbox emails, newest first: state, attempts and last error. No bodies.
+         * @description `status`: Pending, Processing, Sent, Dead (several comma-separated and/or repeated). `orderId`: one order. Paging `page`, `pageSize`. Errors: 400 VALIDATION_FAILED.
+         */
+        get: operations["ListAdminEmails"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/emails/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One outbox email with every send attempt (`attemptLog`).
+         * @description Errors: 404 NOT_FOUND.
+         */
+        get: operations["GetAdminEmail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/emails/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a Dead email again ("Pošalji ponovo"): Pending, due now, attempts start over.
+         * @description When the email's tracking code is no longer stored, a new code is issued for the order. Errors: 404 NOT_FOUND; 409 EMAIL_NOT_RETRYABLE (the email is not Dead).
+         */
+        post: operations["RetryAdminEmail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/orders/{id}/emails/resend-confirmation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue the order confirmation again with a new tracking code. Returns the queued email.
+         * @description Earlier codes stay valid (use `tracking/revoke` first to invalidate them). Allowed in every status. Errors: 404 NOT_FOUND.
+         */
+        post: operations["ResendAdminOrderConfirmation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/orders/{id}/tracking/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke every tracking code of the order issued so far, including codes in emails not yet sent.
+         * @description Revoked codes give 404 TRACKING_NOT_FOUND. Codes issued later (next status email, resent confirmation) work. Errors: 404 NOT_FOUND.
+         */
+        post: operations["RevokeAdminOrderTracking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -899,6 +1019,39 @@ export interface components {
             id: string;
             name: string;
             isActive: boolean;
+        };
+        AdminEmailAttempt: {
+            /** Format: int32 */
+            attemptNumber: number;
+            succeeded: boolean;
+            providerMessageId: null | string;
+            error: null | string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AdminEmailDetail: {
+            email: components["schemas"]["AdminEmailItem"];
+            attemptLog: components["schemas"]["AdminEmailAttempt"][];
+        };
+        AdminEmailItem: {
+            /** Format: uuid */
+            id: string;
+            template: components["schemas"]["EmailTemplate"];
+            status: components["schemas"]["EmailOutboxStatus"];
+            /** Format: uuid */
+            orderId: null | string;
+            orderNumber: null | string;
+            recipient: string;
+            /** Format: int32 */
+            attempts: number;
+            lastError: null | string;
+            /** Format: date-time */
+            nextAttemptAt: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            sentAt: null | string;
+            isResent: boolean;
         };
         AdminMeResponse: {
             /** Format: uuid */
@@ -948,6 +1101,7 @@ export interface components {
             notes: components["schemas"]["AdminOrderNote"][];
             shipments: components["schemas"]["AdminOrderShipment"][];
             allowedNextStatuses: components["schemas"]["AllowedStatusTransition"][];
+            emails: components["schemas"]["AdminEmailItem"][];
         };
         AdminOrderItem: {
             /** Format: uuid */
@@ -1345,6 +1499,10 @@ export interface components {
             /** Format: int32 */
             sortOrder?: null | number;
         };
+        /** @enum {unknown} */
+        EmailOutboxStatus: "Pending" | "Processing" | "Sent" | "Dead";
+        /** @enum {unknown} */
+        EmailTemplate: "OrderReceived" | "OrderAccepted" | "OrderPreparing" | "OrderShipped" | "OrderDelivered" | "OrderCancelled";
         HealthResponse: {
             status: string;
         };
@@ -1410,6 +1568,17 @@ export interface components {
             counts: components["schemas"]["OrderStatusCount"][];
             /** Format: int32 */
             total: number;
+        };
+        PagedResultOfAdminEmailItem: {
+            items: components["schemas"]["AdminEmailItem"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalItems: number;
+            /** Format: int32 */
+            totalPages: number;
         };
         PagedResultOfAdminOrderListItem: {
             items: components["schemas"]["AdminOrderListItem"][];
@@ -1674,6 +1843,10 @@ export interface components {
             /** Format: uuid */
             mainImageId: null | string;
         };
+        RevokeTrackingResponse: {
+            /** Format: int32 */
+            revokedCount: number;
+        };
         SaveCategoryRequest: {
             name: string;
             slug: null | string;
@@ -1720,6 +1893,32 @@ export interface components {
         StoreLinkDto: {
             label: null | string;
             url: null | string;
+        };
+        TrackingLookupRequest: {
+            code: null | string;
+        };
+        TrackingLookupResponse: {
+            orderNumber: string;
+            status: components["schemas"]["OrderStatus"];
+            statusLabel: string;
+            /** Format: date-time */
+            placedAt: string;
+            timeline: components["schemas"]["TrackingTimelineEntry"][];
+            shipment: null | components["schemas"]["TrackingShipment"];
+        };
+        TrackingShipment: {
+            courierName: string;
+            trackingNumber: null | string;
+            trackingUrl: null | string;
+            /** Format: date-time */
+            shippedAt: string;
+        };
+        TrackingTimelineEntry: {
+            status: components["schemas"]["OrderStatus"];
+            label: string;
+            /** Format: date-time */
+            at: string;
+            customerMessage: null | string;
         };
         UpdateProductImageRequest: {
             altText: null | string;
@@ -1937,6 +2136,57 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    LookupTracking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrackingLookupRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrackingLookupResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4458,6 +4708,263 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListAdminEmails: {
+        parameters: {
+            query?: {
+                status?: string[];
+                orderId?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagedResultOfAdminEmailItem"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetAdminEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminEmailDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    RetryAdminEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminEmailItem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ResendAdminOrderConfirmation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminEmailItem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    RevokeAdminOrderTracking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevokeTrackingResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

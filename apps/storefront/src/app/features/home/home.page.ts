@@ -404,7 +404,7 @@ export class HomePage {
     },
     {
       title: 'Platite pouzećem',
-      text: 'Porudžbinu plaćate kuriru kada vam preda paket.',
+      text: 'Porudžbinu plaćate kuriru kada vam preda paket. Do tada je pratite kodom iz e-poruke potvrde.',
     },
   ];
 

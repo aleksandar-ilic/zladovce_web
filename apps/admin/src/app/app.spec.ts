@@ -20,6 +20,7 @@ import { AdminMe } from '@zladovce/models';
 import { App } from './app';
 import { routes } from './app.routes';
 import { ADMIN_NAV } from './core/navigation';
+import { DeadEmailsStore } from './core/dead-emails';
 import { OrderSummaryStore } from './core/order-summary';
 
 const API = 'http://localhost:5080/api/v1';
@@ -27,6 +28,7 @@ const ME_URL = `${API}/admin/me`;
 const HEALTH_URL = 'http://localhost:5080/health';
 const LOW_STOCK_URL = `${API}/admin/dashboard/low-stock`;
 const SUMMARY_URL = `${API}/admin/orders/summary`;
+const EMAILS_URL = `${API}/admin/emails`;
 const DEV: AuthConfig = { mode: 'dev', dev: { email: 'vlasnik@zladovce.local', role: 'Owner' } };
 const COGNITO: AuthConfig = {
   mode: 'cognito',
@@ -419,6 +421,7 @@ describe('shell and dashboard', () => {
     expect(links.map(text)).toEqual([
       'Kontrolna tabla',
       'Porudžbine',
+      'E-poruke',
       'Proizvodi',
       'Kategorije',
       'Zalihe',
@@ -428,6 +431,7 @@ describe('shell and dashboard', () => {
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/',
       '/porudzbine',
+      '/e-poruke',
       '/proizvodi',
       '/kategorije',
       '/zalihe',
@@ -508,6 +512,35 @@ describe('shell and dashboard', () => {
     ctx.controller.expectOne(SUMMARY_URL).flush(counts(0));
     await settle(ctx.fixture);
     expect(badge()).toBeNull();
+  });
+
+  it('shows the number of failed emails next to "E-poruke" and warns on the dashboard', async () => {
+    const ctx = await openDashboard();
+    ctx.controller.expectOne(ME_URL).flush(OWNER);
+    await settle(ctx.fixture);
+    const deadRequests = () =>
+      ctx.controller.match((r) => r.url === EMAILS_URL && r.params.get('status') === 'Dead');
+    const first = deadRequests();
+    expect(first.length).toBe(1);
+    expect(first[0]!.request.params.get('pageSize')).toBe('1');
+    first[0]!.flush({ items: [], page: 1, pageSize: 1, totalItems: 3, totalPages: 3 });
+    await settle(ctx.fixture);
+
+    const badge = () => ctx.root.querySelector('mat-sidenav [data-testid="nav-badge-emails"]');
+    expect(text(badge())).toBe('3 neposlate e-poruke');
+    expect(badge()?.closest('a')?.getAttribute('href')).toBe('/e-poruke');
+    const card = ctx.root.querySelector('[data-testid="dead-emails-card"]');
+    expect(text(card)).toContain('3 neposlate e-poruke');
+    expect(card?.querySelector('[data-testid="dead-emails-link"]')?.getAttribute('href')).toBe(
+      '/e-poruke?status=Dead',
+    );
+
+    TestBed.inject(DeadEmailsStore).refresh(true);
+    await settle(ctx.fixture);
+    deadRequests()[0]!.flush({ items: [], page: 1, pageSize: 1, totalItems: 0, totalPages: 0 });
+    await settle(ctx.fixture);
+    expect(badge()).toBeNull();
+    expect(ctx.root.querySelector('[data-testid="dead-emails-card"]')).toBeNull();
   });
 
   it('has a route for every navigation entry', () => {

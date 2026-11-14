@@ -38,6 +38,11 @@ export const routes: Routes = [
           import('./features/orders/order-detail.page').then((m) => m.OrderDetailPage),
       },
       {
+        path: 'e-poruke',
+        title: 'E-poruke – Zladovce administracija',
+        loadComponent: () => import('./features/emails/emails.page').then((m) => m.EmailsPage),
+      },
+      {
         path: 'proizvodi',
         title: 'Proizvodi – Zladovce administracija',
         loadComponent: () =>

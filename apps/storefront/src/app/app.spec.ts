@@ -174,7 +174,11 @@ describe('navigation config', () => {
   );
 
   it('contains only pages that exist in this phase', () => {
-    expect(MAIN_NAV.map((item) => item.label)).toEqual(['Početna', 'Prodavnica']);
+    expect(MAIN_NAV.map((item) => item.label)).toEqual([
+      'Početna',
+      'Prodavnica',
+      'Praćenje porudžbine',
+    ]);
   });
 });
 

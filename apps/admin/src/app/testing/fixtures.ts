@@ -135,6 +135,7 @@ export function orderDetail(overrides: Partial<AdminOrderDetail> = {}): AdminOrd
     ],
     notes: [],
     shipments: [],
+    emails: [],
     allowedNextStatuses: [
       {
         status: 'Accepted',

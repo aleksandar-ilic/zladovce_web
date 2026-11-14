@@ -57,7 +57,10 @@ export function readPlacedOrder(raw: unknown): PlacedOrder | null {
     typeof order.total === 'number' &&
     typeof order.subtotal === 'number' &&
     typeof order.shippingPrice === 'number'
-    ? (order as PlacedOrder)
+    ? {
+        ...(order as PlacedOrder),
+        trackingCode: typeof order.trackingCode === 'string' ? order.trackingCode : null,
+      }
     : null;
 }
 
@@ -71,7 +74,9 @@ export function readPlacedOrder(raw: unknown): PlacedOrder | null {
  *   (or when the API reports the key as used for different content).
  * - **Draft** of the contact form, so going back to the cart does not lose what was typed;
  *   removed after a successful order.
- * - **Confirmation** of the last order, so the confirmation page survives a reload.
+ * - **Confirmation** of the last order with its tracking code, so the confirmation page survives a
+ *   reload in the same tab. The code is never written to localStorage: it would outlive the tab
+ *   and stay readable for anyone using the same browser later.
  *
  * On the server (and when storage is blocked) everything is kept in memory only.
  */
@@ -128,8 +133,18 @@ export class CheckoutSession {
     this.remove(CHECKOUT_DRAFT_STORAGE);
   }
 
+  /**
+   * Keeps the confirmation, including the tracking code, in this tab's sessionStorage only. A
+   * repeated submission answers 200 with `trackingCode: null` (the code is shown once); the
+   * code already stored for the same order is then kept.
+   */
   saveConfirmation(order: PlacedOrder): void {
-    this.write(CONFIRMATION_STORAGE, JSON.stringify(order));
+    const previous = this.readConfirmation();
+    const trackingCode =
+      order.trackingCode ??
+      (previous?.orderNumber === order.orderNumber ? previous.trackingCode : null) ??
+      null;
+    this.write(CONFIRMATION_STORAGE, JSON.stringify({ ...order, trackingCode }));
   }
 
   readConfirmation(): PlacedOrder | null {

@@ -262,8 +262,8 @@ export function buildStatusRequest(
             data-testid="customer-message"
           ></textarea>
           <mat-hint
-            >Nije obavezno. Kupac će ovu poruku videti uz svoju porudžbinu (praćenje porudžbine
-            stiže uskoro), zato pišite ljubazno i bez internih detalja.</mat-hint
+            >Nije obavezno. Kupac će ovu poruku videti u e-poruci o promeni statusa i na stranici za
+            praćenje porudžbine, zato pišite ljubazno i bez internih detalja.</mat-hint
           >
           @if (form.controls.customerMessage.errors; as errors) {
             <mat-error>{{ message(errors) }}</mat-error>

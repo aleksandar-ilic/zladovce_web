@@ -4,6 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import {
   buildRobots,
   buildSitemap,
+  DISALLOWED_PATHS,
   normaliseSiteUrl,
   sitemapEntries,
   updatedAtBySlug,
@@ -234,15 +235,15 @@ describe('sitemap.xml and robots.txt', () => {
     expect(normaliseSiteUrl('')).toBe('http://localhost:4200');
   });
 
-  it('robots.txt disallows cart, checkout and confirmation and points to the sitemap', () => {
+  it('robots.txt disallows cart, checkout, confirmation and tracking and points to the sitemap', () => {
     expect(buildRobots('https://zladovce.com')).toBe(
-      'User-agent: *\nDisallow: /korpa\nDisallow: /porucivanje\nDisallow: /porudzbina-primljena\n\nSitemap: https://zladovce.com/sitemap.xml\n',
+      'User-agent: *\nDisallow: /korpa\nDisallow: /porucivanje\nDisallow: /porudzbina-primljena\nDisallow: /track-order\nDisallow: /pracenje-porudzbine\n\nSitemap: https://zladovce.com/sitemap.xml\n',
     );
   });
 
   it('never lists the client-only pages in the sitemap', () => {
     const xml = buildSitemap('https://zladovce.com', sitemapEntries({ products: ['a'] }));
-    for (const path of ['/korpa', '/porucivanje', '/porudzbina-primljena']) {
+    for (const path of DISALLOWED_PATHS) {
       expect(xml).not.toContain(path);
     }
   });

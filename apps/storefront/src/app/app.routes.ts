@@ -50,6 +50,18 @@ export const routes: Routes = [
       import('./features/checkout/confirmation.page').then((m) => m.ConfirmationPage),
   },
   {
+    path: 'track-order',
+    title: 'Praćenje porudžbine – Zladovce',
+    data: { noindex: true } satisfies SeoData,
+    loadComponent: () => import('./features/tracking/tracking.page').then((m) => m.TrackingPage),
+  },
+  {
+    // Serbian alias; `/track-order` is canonical (email links). The fragment `#kod=…` is kept.
+    path: 'pracenje-porudzbine',
+    pathMatch: 'full',
+    redirectTo: 'track-order',
+  },
+  {
     path: '**',
     title: 'Stranica nije pronađena – Zladovce',
     data: { noindex: true } satisfies SeoData,

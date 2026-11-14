@@ -178,3 +178,18 @@ export type SaveCourierRequest = Schemas['SaveCourierRequest'];
 export type AdminStoreSettings = Schemas['AdminStoreSettingsResponse'];
 export type UpdateStoreSettingsRequest = Schemas['UpdateStoreSettingsRequest'];
 export type StoreLink = Schemas['StoreLinkDto'];
+
+// ---------------------------------------------------------------------------------------------
+// Phase 6 – order tracking and transactional emails (generated).
+// ---------------------------------------------------------------------------------------------
+export type TrackingLookupRequest = Schemas['TrackingLookupRequest'];
+export type TrackingLookup = Schemas['TrackingLookupResponse'];
+export type TrackingTimelineEntry = Schemas['TrackingTimelineEntry'];
+export type TrackingShipment = Schemas['TrackingShipment'];
+
+export type EmailTemplate = Schemas['EmailTemplate'];
+export type EmailOutboxStatus = Schemas['EmailOutboxStatus'];
+export type AdminEmailItem = Schemas['AdminEmailItem'];
+export type AdminEmailDetail = Schemas['AdminEmailDetail'];
+export type AdminEmailAttempt = Schemas['AdminEmailAttempt'];
+export type RevokeTrackingResponse = Schemas['RevokeTrackingResponse'];

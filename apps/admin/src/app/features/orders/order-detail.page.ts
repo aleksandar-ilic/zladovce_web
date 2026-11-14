@@ -38,6 +38,7 @@ import { OrdersApi } from '../../data/orders-api';
 import { ConfirmService } from '../../shared/confirm-dialog';
 import { OrderStatusBadge } from '../../shared/order-status-badge';
 import { nextStepHint, OrderAction, orderActions } from './order-actions';
+import { OrderEmails } from './order-emails';
 import { PaymentDialog, PaymentDialogResult } from './payment.dialog';
 import { ShipmentDialog, ShipmentDialogData } from './shipment.dialog';
 import {
@@ -80,7 +81,8 @@ export function timelineActor(entry: AdminOrderTimelineEntry): string {
 
 /**
  * One order: who ordered what and where it goes, the next step as big buttons
- * (derived from `allowedNextStatuses`), payment, shipments, notes and the full history.
+ * (derived from `allowedNextStatuses`), payment, shipments, customer emails, notes and the full
+ * history.
  * Every change answers with the whole order; its `version` is used for the next change.
  */
 @Component({
@@ -91,6 +93,7 @@ export function timelineActor(entry: AdminOrderTimelineEntry): string {
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
+    OrderEmails,
     OrderStatusBadge,
     RsdPipe,
     SrDatePipe,
@@ -439,6 +442,8 @@ export function timelineActor(entry: AdminOrderTimelineEntry): string {
                 </ul>
               }
             </ui-card>
+
+            <adm-order-emails [order]="o" (changed)="reload()" />
 
             <ui-card data-testid="notes">
               <h2 uiCardTitle>Interne napomene</h2>

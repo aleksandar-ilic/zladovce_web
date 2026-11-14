@@ -10,8 +10,11 @@ export interface AdminNavItem {
   icon: string;
   /** Roles that see the entry; omitted means every administrator. The route needs `roleGuard` too. */
   roles?: readonly AdminRole[];
-  /** A live number next to the label: `receivedOrders` = new orders waiting to be accepted. */
-  badge?: 'receivedOrders';
+  /**
+   * A live number next to the label: `receivedOrders` = new orders waiting to be accepted,
+   * `deadEmails` = customer emails that could not be sent.
+   */
+  badge?: 'receivedOrders' | 'deadEmails';
 }
 
 /**
@@ -31,6 +34,13 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     // receipt
     icon: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h4',
     badge: 'receivedOrders',
+  },
+  {
+    label: 'E-poruke',
+    path: '/e-poruke',
+    // envelope
+    icon: 'M3 6h18v12H3zM3 7l9 6 9-6',
+    badge: 'deadEmails',
   },
   {
     label: 'Proizvodi',
