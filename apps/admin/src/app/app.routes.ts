@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from '@zladovce/auth';
+import { unsavedChangesGuard } from './shared/unsaved-changes';
 
 /**
  * Admin routes. Everything except the sign-in page lives inside the guarded shell.
@@ -24,6 +25,52 @@ export const routes: Routes = [
         title: 'Kontrolna tabla – Zladovce administracija',
         loadComponent: () =>
           import('./features/dashboard/dashboard.page').then((m) => m.DashboardPage),
+      },
+      {
+        path: 'proizvodi',
+        title: 'Proizvodi – Zladovce administracija',
+        loadComponent: () =>
+          import('./features/products/products.page').then((m) => m.ProductsPage),
+      },
+      {
+        path: 'proizvodi/novi',
+        title: 'Novi proizvod – Zladovce administracija',
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: () =>
+          import('./features/products/product-form.page').then((m) => m.ProductFormPage),
+      },
+      {
+        path: 'proizvodi/:id',
+        title: 'Izmena proizvoda – Zladovce administracija',
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: () =>
+          import('./features/products/product-form.page').then((m) => m.ProductFormPage),
+      },
+      {
+        path: 'kategorije',
+        title: 'Kategorije – Zladovce administracija',
+        loadComponent: () =>
+          import('./features/categories/categories.page').then((m) => m.CategoriesPage),
+      },
+      {
+        path: 'kategorije/nova',
+        title: 'Nova kategorija – Zladovce administracija',
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: () =>
+          import('./features/categories/category-form.page').then((m) => m.CategoryFormPage),
+      },
+      {
+        path: 'kategorije/:id',
+        title: 'Izmena kategorije – Zladovce administracija',
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: () =>
+          import('./features/categories/category-form.page').then((m) => m.CategoryFormPage),
+      },
+      {
+        path: 'zalihe',
+        title: 'Zalihe – Zladovce administracija',
+        loadComponent: () =>
+          import('./features/inventory/inventory.page').then((m) => m.InventoryPage),
       },
       {
         path: '**',

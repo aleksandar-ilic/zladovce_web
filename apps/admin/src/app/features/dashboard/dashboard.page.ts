@@ -12,6 +12,7 @@ import { AuthService } from '@zladovce/auth';
 import { adminRoleLabel } from '@zladovce/shared';
 import { UiBadge, UiCard, UiCardTitle, UiErrorState, UiLoadingState } from '@zladovce/ui';
 import { SrDatePipe } from '@zladovce/utilities';
+import { LowStockCard } from './low-stock-card';
 
 type HealthState =
   | { status: 'loading' }
@@ -19,12 +20,12 @@ type HealthState =
   | { status: 'error'; error: ApiError };
 
 /**
- * Kontrolna tabla (Phase 2): who is signed in according to `GET /admin/me`, and whether the
- * API answers. Phase 7 adds the business metrics and charts.
+ * Kontrolna tabla: who is signed in according to `GET /admin/me`, whether the API answers and
+ * which packages are running low (Phase 3). Phase 7 adds the business metrics and charts.
  */
 @Component({
   selector: 'adm-dashboard-page',
-  imports: [UiCard, UiCardTitle, UiBadge, UiLoadingState, UiErrorState, SrDatePipe],
+  imports: [UiCard, UiCardTitle, UiBadge, UiLoadingState, UiErrorState, SrDatePipe, LowStockCard],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <h1 class="text-3xl">Kontrolna tabla</h1>
@@ -90,6 +91,8 @@ type HealthState =
           }
         }
       </ui-card>
+
+      <adm-low-stock-card />
     </div>
   `,
 })

@@ -1,0 +1,510 @@
+<a routerLink="/proizvodi" class="text-sm font-semibold text-olive-700 underline underline-offset-4"
+  >← Nazad na proizvode</a
+>
+<div class="mt-3 flex flex-wrap items-center gap-3">
+  <h1 class="text-3xl">{{ isNew() ? 'Novi proizvod' : 'Izmena proizvoda' }}</h1>
+  @if (archived()) {
+    <ui-badge tone="warning">Arhiviran</ui-badge>
+  }
+</div>
+
+@switch (load().status) {
+  @case ('loading') {
+    <ui-loading-state [label]="isNew() ? 'Priprema obrasca…' : 'Učitavanje proizvoda…'" />
+  }
+  @case ('error') {
+    <ui-error-state
+      [title]="isNew() ? 'Kategorije nisu učitane' : 'Proizvod nije učitan'"
+      [message]="loadError()"
+      [retryable]="!notFound()"
+      (retry)="fetch()"
+    />
+  }
+  @default {
+    @if (isNew() && categories().length === 0) {
+      <div class="mt-6 max-w-2xl rounded-lg border border-cream-200 bg-white p-6">
+        <p class="font-serif text-xl font-semibold text-olive-900">Prvo napravite kategoriju</p>
+        <p class="mt-2 text-ink-700">
+          Svaki proizvod pripada jednoj kategoriji (na primer Džemovi ili Sokovi). Napravite bar
+          jednu kategoriju, pa se vratite ovde.
+        </p>
+        <a matButton="filled" class="mt-4" routerLink="/kategorije/nova">Nova kategorija</a>
+      </div>
+    } @else {
+      <form
+        class="mt-6 flex max-w-4xl flex-col gap-6 pb-24"
+        [formGroup]="form"
+        (ngSubmit)="save()"
+        novalidate
+      >
+        @if (conflict()) {
+          <div
+            class="rounded-md border border-warning-700/30 bg-warning-50 px-4 py-3 text-warning-700"
+            role="alert"
+            data-testid="conflict"
+          >
+            <p class="font-semibold">Neko je u međuvremenu izmenio ovaj proizvod.</p>
+            <p class="mt-1 text-sm">
+              Proizvod je promenjen posle nego što ste otvorili ovu stranicu (možda u drugom prozoru
+              ili od strane druge osobe). Da ne biste poništili te izmene, učitajte najnoviju
+              verziju. Izmene koje ste ovde uneli, a niste sačuvali, biće odbačene.
+            </p>
+            <button matButton="filled" type="button" class="mt-3" (click)="reload()">
+              Učitaj najnoviju verziju
+            </button>
+          </div>
+        }
+
+        @if (archived()) {
+          <div class="rounded-md bg-sage-50 px-4 py-3 text-ink-700" role="status">
+            <p>
+              Ovaj proizvod je arhiviran i ne prikazuje se u prodavnici. Da biste ga menjali, prvo
+              ga vratite.
+            </p>
+            <button
+              matButton="filled"
+              type="button"
+              class="mt-3"
+              [disabled]="busy()"
+              (click)="restore()"
+            >
+              Vrati proizvod
+            </button>
+          </div>
+        }
+
+        @if (formError(); as text) {
+          <p
+            class="rounded-md bg-danger-50 px-4 py-3 text-sm font-medium text-danger-700"
+            role="alert"
+            data-testid="form-error"
+          >
+            {{ text }}
+          </p>
+        }
+
+        <!-- Osnovni podaci -->
+        <section class="rounded-lg border border-cream-200 bg-white p-5" aria-labelledby="osnovno">
+          <h2 id="osnovno" class="text-xl">Osnovni podaci</h2>
+
+          <mat-form-field appearance="outline" class="mt-4 w-full">
+            <mat-label>Naziv proizvoda</mat-label>
+            <input matInput formControlName="name" maxlength="200" />
+            <mat-hint>Na primer: Džem od šljiva</mat-hint>
+            @if (form.controls.name.errors; as errors) {
+              <mat-error>{{ message(errors) }}</mat-error>
+            }
+          </mat-form-field>
+
+          <div class="mt-1 mb-3 text-sm text-ink-700">
+            @if (!editSlug()) {
+              <p>
+                Adresa u prodavnici:
+                <span class="font-semibold break-all" data-testid="slug-preview"
+                  >/proizvod/{{ slugPreview() || '…' }}</span
+                >
+                @if (!archived()) {
+                  <button
+                    type="button"
+                    class="ml-2 cursor-pointer font-semibold text-olive-700 underline underline-offset-4"
+                    (click)="startSlugEdit()"
+                  >
+                    Promeni adresu
+                  </button>
+                }
+              </p>
+            } @else {
+              <mat-form-field appearance="outline" class="w-full">
+                <mat-label>Adresa (slug)</mat-label>
+                <span matTextPrefix>/proizvod/</span>
+                <input matInput formControlName="slug" maxlength="120" />
+                <mat-hint>{{
+                  isNew()
+                    ? 'Ostavite prazno da se adresa napravi od naziva.'
+                    : 'Ostavite prazno da adresa ostane ista.'
+                }}</mat-hint>
+                @if (form.controls.slug.errors; as errors) {
+                  <mat-error>{{ message(errors, slugMessages) }}</mat-error>
+                }
+              </mat-form-field>
+            }
+          </div>
+
+          <div class="grid gap-x-4 sm:grid-cols-2">
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Kategorija</mat-label>
+              <mat-select formControlName="categoryId">
+                @for (category of categories(); track category.id) {
+                  <mat-option [value]="category.id">{{ category.name }}</mat-option>
+                }
+                @if (categoryMissing()) {
+                  <mat-option [value]="form.controls.categoryId.value" disabled>{{
+                    product()?.category?.name ?? 'Arhivirana kategorija'
+                  }}</mat-option>
+                }
+              </mat-select>
+              @if (form.controls.categoryId.errors; as errors) {
+                <mat-error>{{
+                  errors['required'] ? 'Izaberite kategoriju.' : message(errors)
+                }}</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Šifra proizvoda (SKU)</mat-label>
+              <input matInput formControlName="sku" maxlength="64" autocapitalize="characters" />
+              <mat-hint>Interna oznaka, na primer DZEM-SLJIVA.</mat-hint>
+              @if (form.controls.sku.errors; as errors) {
+                <mat-error>{{ message(errors) }}</mat-error>
+              }
+            </mat-form-field>
+          </div>
+
+          <mat-form-field appearance="outline" class="mt-1 w-full">
+            <mat-label>Kratak opis</mat-label>
+            <textarea
+              matInput
+              formControlName="shortDescription"
+              rows="3"
+              maxlength="500"
+            ></textarea>
+            <mat-hint>Jedna ili dve rečenice, prikazuju se ispod naziva.</mat-hint>
+            <mat-hint align="end">{{ form.controls.shortDescription.value.length }} / 500</mat-hint>
+            @if (form.controls.shortDescription.errors; as errors) {
+              <mat-error>{{ message(errors) }}</mat-error>
+            }
+          </mat-form-field>
+
+          <div class="mt-3">
+            <p class="text-sm font-semibold text-ink-900" id="opis-label">Opširan opis</p>
+            <p class="mb-2 text-sm text-ink-500" id="opis-hint">
+              Sastojci, način pripreme, čuvanje… Označite tekst pa izaberite oblikovanje.
+            </p>
+            <adm-rich-text-editor
+              formControlName="description"
+              label="Opširan opis"
+              describedBy="opis-hint"
+              [invalid]="form.controls.description.invalid && form.controls.description.touched"
+            />
+            @if (form.controls.description.touched && form.controls.description.errors; as errors) {
+              <p class="mt-1.5 text-sm font-medium text-danger-700" role="alert">
+                {{ message(errors) }}
+              </p>
+            }
+          </div>
+        </section>
+
+        <!-- Pakovanja i cene -->
+        <section
+          class="rounded-lg border border-cream-200 bg-white p-5"
+          aria-labelledby="pakovanja"
+        >
+          <h2 id="pakovanja" class="text-xl">Pakovanja i cene</h2>
+          <p class="mt-1 text-sm text-ink-700">
+            Svako pakovanje (na primer tegla od 370 g i od 720 g) ima svoju cenu, šifru i zalihu.
+            @if (!isNew()) {
+              Izmene pakovanja se čuvaju dugmetom „Sačuvaj izmene“ na dnu, zajedno sa ostalim
+              podacima. Stanje na zalihama se menja na stranici
+              <a
+                routerLink="/zalihe"
+                class="font-semibold text-olive-700 underline underline-offset-4"
+                >Zalihe</a
+              >.
+            }
+          </p>
+
+          <div formArrayName="variants" class="mt-4 flex flex-col gap-4">
+            @for (row of variants; track $index; let i = $index) {
+              <fieldset
+                [formGroupName]="i"
+                class="rounded-lg border border-cream-200 bg-cream-50 p-4"
+                data-testid="variant-row"
+              >
+                <legend class="sr-only">Pakovanje {{ i + 1 }}</legend>
+                <div class="flex flex-wrap items-center gap-2">
+                  <h3 class="flex-1 font-sans text-base font-semibold text-ink-900">
+                    Pakovanje {{ i + 1 }}
+                    @if (row.controls.name.value) {
+                      – {{ row.controls.name.value }}
+                    }
+                  </h3>
+                  @if (!row.controls.id.value) {
+                    <ui-badge tone="info">Novo</ui-badge>
+                  } @else if (row.dirty) {
+                    <ui-badge tone="warning">Izmenjeno</ui-badge>
+                  }
+                  @if (savedVariant(row); as saved) {
+                    <ui-badge [tone]="stockTones[saved.stockStatus]">{{
+                      stockLabels[saved.stockStatus]
+                    }}</ui-badge>
+                  }
+                  @if (variants.length > 1 && !archived()) {
+                    <button
+                      matButton
+                      type="button"
+                      class="danger-button"
+                      [disabled]="busy() || saving()"
+                      (click)="removeVariant(i)"
+                    >
+                      Ukloni
+                    </button>
+                  }
+                </div>
+
+                <div class="mt-3 grid gap-x-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Količina</mat-label>
+                    <input
+                      matInput
+                      type="number"
+                      inputmode="decimal"
+                      min="0"
+                      step="any"
+                      formControlName="unitAmount"
+                    />
+                    @if (row.controls.unitAmount.errors; as errors) {
+                      <mat-error>{{ message(errors) }}</mat-error>
+                    }
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Jedinica mere</mat-label>
+                    <mat-select formControlName="measurementUnit">
+                      @for (unit of units; track unit) {
+                        <mat-option [value]="unit">{{ unitLabels[unit] }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Naziv pakovanja</mat-label>
+                    <input matInput formControlName="name" maxlength="120" />
+                    @if (row.controls.name.errors; as errors) {
+                      <mat-error>{{ message(errors) }}</mat-error>
+                    }
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Šifra pakovanja (SKU)</mat-label>
+                    <input
+                      matInput
+                      formControlName="sku"
+                      maxlength="64"
+                      autocapitalize="characters"
+                    />
+                    @if (row.controls.sku.errors; as errors) {
+                      <mat-error>{{ message(errors) }}</mat-error>
+                    }
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Redovna cena</mat-label>
+                    <input
+                      matInput
+                      type="number"
+                      inputmode="decimal"
+                      min="0"
+                      step="any"
+                      formControlName="regularPrice"
+                    />
+                    <span matTextSuffix>&nbsp;RSD</span>
+                    @if (row.controls.regularPrice.errors; as errors) {
+                      <mat-error>{{ message(errors) }}</mat-error>
+                    }
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Akcijska cena</mat-label>
+                    <input
+                      matInput
+                      type="number"
+                      inputmode="decimal"
+                      min="0"
+                      step="any"
+                      formControlName="discountPrice"
+                    />
+                    <span matTextSuffix>&nbsp;RSD</span>
+                    <mat-hint>Nije obavezno.</mat-hint>
+                    @if (row.controls.discountPrice.errors; as errors) {
+                      <mat-error>{{ message(errors) }}</mat-error>
+                    }
+                  </mat-form-field>
+                  @if (!row.controls.id.value) {
+                    <mat-form-field appearance="outline">
+                      <mat-label>Početno stanje (komada)</mat-label>
+                      <input
+                        matInput
+                        type="number"
+                        inputmode="numeric"
+                        min="0"
+                        step="1"
+                        formControlName="initialStock"
+                      />
+                      @if (row.controls.initialStock.errors; as errors) {
+                        <mat-error>{{ message(errors) }}</mat-error>
+                      }
+                    </mat-form-field>
+                    <mat-form-field appearance="outline">
+                      <mat-label>Upozori kad ostane</mat-label>
+                      <input
+                        matInput
+                        type="number"
+                        inputmode="numeric"
+                        min="0"
+                        step="1"
+                        formControlName="lowStockThreshold"
+                      />
+                      <mat-hint>komada ili manje</mat-hint>
+                      @if (row.controls.lowStockThreshold.errors; as errors) {
+                        <mat-error>{{ message(errors) }}</mat-error>
+                      }
+                    </mat-form-field>
+                  }
+                </div>
+
+                <div class="mt-1 flex flex-wrap items-center gap-x-6 gap-y-2">
+                  <mat-checkbox formControlName="isActive">Pakovanje je u prodaji</mat-checkbox>
+                  @if (savedVariant(row); as saved) {
+                    <p class="text-sm text-ink-700" data-testid="variant-stock">
+                      Na stanju: <strong>{{ saved.quantityOnHand }}</strong> · upozorenje na
+                      {{ saved.lowStockThreshold }} ·
+                      <a
+                        routerLink="/zalihe"
+                        [queryParams]="{ q: saved.sku }"
+                        class="font-semibold text-olive-700 underline underline-offset-4"
+                        >promeni stanje</a
+                      >
+                    </p>
+                  }
+                </div>
+              </fieldset>
+            }
+          </div>
+
+          @if (form.controls.variants.hasError('duplicateSku') && form.controls.variants.touched) {
+            <p class="mt-2 text-sm font-medium text-danger-700" role="alert">
+              Svako pakovanje mora imati svoju šifru.
+            </p>
+          }
+
+          @if (!archived()) {
+            <button
+              matButton="tonal"
+              type="button"
+              class="mt-4"
+              [disabled]="variants.length >= maxVariants || saving()"
+              (click)="addVariant()"
+            >
+              + Dodaj pakovanje
+            </button>
+          }
+        </section>
+
+        <!-- Vidljivost -->
+        <section
+          class="rounded-lg border border-cream-200 bg-white p-5"
+          aria-labelledby="vidljivost"
+        >
+          <h2 id="vidljivost" class="text-xl">Vidljivost</h2>
+          <div class="mt-3 flex flex-col gap-3">
+            <mat-slide-toggle formControlName="isActive">
+              Proizvod je u prodaji (vidljiv u prodavnici)
+            </mat-slide-toggle>
+            <mat-slide-toggle formControlName="isFeatured">
+              Istaknut proizvod (prikazuje se među izdvojenim proizvodima)
+            </mat-slide-toggle>
+          </div>
+        </section>
+
+        <!-- Fotografije -->
+        <section
+          id="fotografije"
+          class="rounded-lg border border-cream-200 bg-white p-5"
+          aria-labelledby="fotografije-naslov"
+        >
+          <h2 id="fotografije-naslov" class="text-xl">Fotografije</h2>
+          @if (product(); as current) {
+            <adm-product-images
+              class="mt-3"
+              [product]="current"
+              [disabled]="archived()"
+              (productChange)="applyProduct($event)"
+              (uploadingChange)="uploading.set($event)"
+            />
+          } @else {
+            <p class="mt-2 text-sm text-ink-700">
+              Fotografije možete dodati odmah posle prvog čuvanja proizvoda – stranica će se sama
+              prebaciti na dodavanje fotografija.
+            </p>
+          }
+        </section>
+
+        <!-- SEO -->
+        <mat-accordion>
+          <mat-expansion-panel
+            [expanded]="form.controls.seoTitle.invalid || form.controls.seoDescription.invalid"
+          >
+            <mat-expansion-panel-header>
+              <mat-panel-title>Napredno / SEO</mat-panel-title>
+              <mat-panel-description class="hidden sm:flex"
+                >Naslov i opis za Google (nije obavezno)</mat-panel-description
+              >
+            </mat-expansion-panel-header>
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>SEO naslov</mat-label>
+              <input matInput formControlName="seoTitle" maxlength="120" />
+              <mat-hint>Ako ostane prazno, koristi se naziv proizvoda.</mat-hint>
+              @if (form.controls.seoTitle.errors; as errors) {
+                <mat-error>{{ message(errors) }}</mat-error>
+              }
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="mt-2 w-full">
+              <mat-label>SEO opis</mat-label>
+              <textarea
+                matInput
+                formControlName="seoDescription"
+                rows="3"
+                maxlength="320"
+              ></textarea>
+              <mat-hint>Ako ostane prazno, koristi se kratak opis.</mat-hint>
+              <mat-hint align="end">{{ form.controls.seoDescription.value.length }} / 320</mat-hint>
+              @if (form.controls.seoDescription.errors; as errors) {
+                <mat-error>{{ message(errors) }}</mat-error>
+              }
+            </mat-form-field>
+          </mat-expansion-panel>
+        </mat-accordion>
+
+        <!-- Akcije -->
+        <div
+          class="sticky bottom-0 z-10 -mx-5 flex flex-wrap items-center gap-3 border-t border-cream-200 bg-cream-50/95 px-5 py-3 md:-mx-8 md:px-8"
+        >
+          @if (!archived()) {
+            <button
+              matButton="filled"
+              type="submit"
+              data-testid="save"
+              [disabled]="saving() || busy() || conflict()"
+            >
+              {{ saving() ? 'Čuvanje…' : isNew() ? 'Sačuvaj proizvod' : 'Sačuvaj izmene' }}
+            </button>
+          }
+          <a matButton routerLink="/proizvodi">{{ form.dirty ? 'Odustani' : 'Nazad na spisak' }}</a>
+          <span class="flex-1"></span>
+          @if (product(); as current) {
+            @if (current.isArchived) {
+              <button matButton="outlined" type="button" [disabled]="busy()" (click)="restore()">
+                Vrati proizvod
+              </button>
+            } @else {
+              <button
+                matButton
+                type="button"
+                class="danger-button"
+                [disabled]="busy() || saving()"
+                (click)="archive()"
+              >
+                Arhiviraj proizvod
+              </button>
+            }
+          }
+        </div>
+      </form>
+    }
+  }
+}

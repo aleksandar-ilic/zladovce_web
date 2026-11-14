@@ -2,6 +2,14 @@ import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormControl, FormGroup } from '@angular/forms';
 import { CART_MAX_LINE_QUANTITY, CART_STORAGE_KEY, CartStore } from './cart-store';
+import {
+  ADMIN_PRODUCT_SORTS,
+  formatUnitAmount,
+  MEASUREMENT_UNIT_LABELS,
+  MEASUREMENT_UNITS,
+  MOVEMENT_TYPE_LABELS,
+  STOCK_STATUS_LABELS,
+} from './catalog-labels';
 import { adminRoleLabel } from './labels';
 import { matchingValues, notBlank } from './validators';
 
@@ -251,5 +259,39 @@ describe('validators', () => {
   it('notBlank rejects whitespace-only text', () => {
     expect(notBlank(new FormControl('   '))).toEqual({ required: true });
     expect(notBlank(new FormControl(' a '))).toBeNull();
+  });
+});
+
+describe('catalog labels', () => {
+  it('formats package sizes the Serbian way', () => {
+    expect(formatUnitAmount(370, 'g')).toBe('370 g');
+    expect(formatUnitAmount(0.5, 'l')).toBe('0,5 l');
+    expect(formatUnitAmount(1500, 'ml')).toBe('1.500 ml');
+    expect(formatUnitAmount(null, 'g')).toBe('');
+    expect(formatUnitAmount(3, null)).toBe('');
+  });
+
+  it('has Serbian labels for units, stock states, movements and sorts', () => {
+    expect(MEASUREMENT_UNITS.map((unit) => MEASUREMENT_UNIT_LABELS[unit])).toEqual([
+      'gram (g)',
+      'kilogram (kg)',
+      'mililitar (ml)',
+      'litar (l)',
+      'komad (kom)',
+    ]);
+    expect(STOCK_STATUS_LABELS).toEqual({
+      ok: 'Na stanju',
+      low: 'Malo na stanju',
+      out: 'Nema na stanju',
+    });
+    expect(MOVEMENT_TYPE_LABELS.ManualAdjustment).toBe('Ručna korekcija');
+    expect(MOVEMENT_TYPE_LABELS.ReturnRestock).toBe('Povrat na stanje');
+    expect(ADMIN_PRODUCT_SORTS.map((s) => s.label)).toEqual([
+      'Najnovije',
+      'Najstarije',
+      'Naziv A–Ž',
+      'Naziv Ž–A',
+      'Poslednje izmenjeno',
+    ]);
   });
 });

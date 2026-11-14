@@ -55,6 +55,123 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Active categories in display order, with the number of visible products. */
+        get: operations["GetCatalogCategories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/categories/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An active category with its SEO data.
+         * @description Errors: 404 NOT_FOUND (unknown, inactive or archived).
+         */
+        get: operations["GetCatalogCategory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Product grid: visible products with the listing price (lowest variant price) and availability.
+         * @description Visible = active, not archived, in an active category, with at least one active variant. Sort `bestselling` is accepted and ordered like `newest` until order data exists. Errors: 400 VALIDATION_FAILED.
+         */
+        get: operations["GetCatalogProducts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Product page: variants with prices and availability (never the exact stock), images, SEO.
+         * @description Errors: 404 NOT_FOUND (unknown or not visible).
+         */
+        get: operations["GetCatalogProduct"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{slug}/related": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Other visible products of the same category (featured first, then newest). `limit` 1–12, default 4.
+         * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND.
+         */
+        get: operations["GetCatalogRelatedProducts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Live price and availability of variants (for prerendered pages and the cart).
+         * @description `variantIds`: up to 100 ids, repeated (`variantIds=a&variantIds=b`) or comma-separated (`variantIds=a,b`). Variants that are not on sale are missing from the result. Errors: 400 VALIDATION_FAILED.
+         */
+        get: operations["GetCatalogAvailability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/me": {
         parameters: {
             query?: never;
@@ -72,10 +189,422 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/media/upload-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pre-signed browser upload (multipart POST straight to the storage) for a product or category image.
+         * @description Errors: 400 VALIDATION_FAILED (content type, size, purpose).
+         */
+        post: operations["CreateMediaUploadUrl"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dashboard/low-stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Variants at or below their low-stock threshold, emptiest first. `limit` 1–100, default 10.
+         * @description Errors: 400 VALIDATION_FAILED.
+         */
+        get: operations["GetDashboardLowStock"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** All categories that are not archived, with product counts. */
+        get: operations["ListAdminCategories"];
+        put?: never;
+        /**
+         * Create a category. The slug is generated from the name when not given.
+         * @description Errors: 400 VALIDATION_FAILED, INVALID_IMAGE, UPLOAD_NOT_FOUND; 409 SLUG_TAKEN, IMAGE_NOT_READY, IMAGE_ALREADY_ATTACHED.
+         */
+        post: operations["CreateAdminCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/categories/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the display order of all categories.
+         * @description Errors: 400 VALIDATION_FAILED (must list every non-archived category exactly once).
+         */
+        put: operations["ReorderAdminCategories"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/categories/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A category.
+         * @description Errors: 404 NOT_FOUND (also archived).
+         */
+        get: operations["GetAdminCategory"];
+        /**
+         * Update a category. Empty slug keeps the current one; `imageKey` null removes the image.
+         * @description Errors: 400 VALIDATION_FAILED, INVALID_IMAGE, UPLOAD_NOT_FOUND; 404 NOT_FOUND; 409 SLUG_TAKEN, IMAGE_NOT_READY, IMAGE_ALREADY_ATTACHED.
+         */
+        put: operations["UpdateAdminCategory"];
+        post?: never;
+        /**
+         * Archive a category. Refused while it has products that are not archived.
+         * @description Errors: 404 NOT_FOUND; 409 CATEGORY_HAS_PRODUCTS.
+         */
+        delete: operations["ArchiveAdminCategory"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Products with price range, stock summary and main image.
+         * @description Errors: 400 VALIDATION_FAILED.
+         */
+        get: operations["ListAdminProducts"];
+        put?: never;
+        /**
+         * Create a product with at least one variant; each variant gets its stock record (and an InitialStock movement when above 0).
+         * @description Errors: 400 VALIDATION_FAILED (also unknown/archived categoryId); 409 SLUG_TAKEN, SKU_TAKEN.
+         */
+        post: operations["CreateAdminProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/products/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A product (archived ones too) with its variants, stock and images.
+         * @description Errors: 404 NOT_FOUND.
+         */
+        get: operations["GetAdminProduct"];
+        /**
+         * Update product values. Requires the `version` last read; a stale version gives 409 CONCURRENT_EDIT.
+         * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND; 409 CONCURRENT_EDIT, SLUG_TAKEN, SKU_TAKEN, NO_ACTIVE_VARIANT, PRODUCT_ARCHIVED.
+         */
+        put: operations["UpdateAdminProduct"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/products/{id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archive a product (hidden everywhere, slug and SKU become reusable). Idempotent.
+         * @description Errors: 404 NOT_FOUND.
+         */
+        post: operations["ArchiveAdminProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/products/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore an archived product. Idempotent.
+         * @description Errors: 404 NOT_FOUND; 409 SLUG_TAKEN, SKU_TAKEN (reused meanwhile), CATEGORY_ARCHIVED.
+         */
+        post: operations["RestoreAdminProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/products/{id}/variants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a variant with its opening stock. Returns the whole product.
+         * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND; 409 SKU_TAKEN, PRODUCT_ARCHIVED, CONFLICT (50 variants).
+         */
+        post: operations["AddAdminProductVariant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/products/{id}/variants/{variantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update a variant (stock is changed through the inventory endpoints). Returns the whole product.
+         * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND; 409 SKU_TAKEN, LAST_ACTIVE_VARIANT, PRODUCT_ARCHIVED.
+         */
+        put: operations["UpdateAdminProductVariant"];
+        post?: never;
+        /**
+         * Archive a variant. Returns the whole product.
+         * @description Errors: 404 NOT_FOUND; 409 LAST_VARIANT, LAST_ACTIVE_VARIANT, PRODUCT_ARCHIVED.
+         */
+        delete: operations["ArchiveAdminProductVariant"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/products/{id}/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach an uploaded image (key from upload-url). The first image becomes the main image. Returns the whole product.
+         * @description Errors: 400 VALIDATION_FAILED (key not a product upload key), INVALID_IMAGE, UPLOAD_NOT_FOUND; 404 NOT_FOUND; 409 IMAGE_NOT_READY (processor still running, retry), IMAGE_ALREADY_ATTACHED, IMAGE_LIMIT_REACHED (20), PRODUCT_ARCHIVED.
+         */
+        post: operations["AttachAdminProductImage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/products/{id}/images/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the order of all images and the main image (null = first). Returns the whole product.
+         * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND; 409 PRODUCT_ARCHIVED.
+         */
+        put: operations["ReorderAdminProductImages"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/products/{id}/images/{imageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change the alt text of an image. Returns the whole product.
+         * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND; 409 PRODUCT_ARCHIVED.
+         */
+        put: operations["UpdateAdminProductImage"];
+        post?: never;
+        /**
+         * Remove an image and its files; the next image becomes main when needed. Returns the whole product.
+         * @description Errors: 404 NOT_FOUND; 409 PRODUCT_ARCHIVED.
+         */
+        delete: operations["DeleteAdminProductImage"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/inventory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Variants (of products that are not archived) with stock, threshold and status.
+         * @description Errors: 400 VALIDATION_FAILED.
+         */
+        get: operations["ListInventory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/inventory/{variantId}/adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Manual stock correction with a mandatory reason. Atomic; stock never goes below zero.
+         * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND; 409 INSUFFICIENT_STOCK.
+         */
+        post: operations["AdjustInventory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/inventory/{variantId}/threshold": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the low-stock threshold of a variant.
+         * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND.
+         */
+        put: operations["SetInventoryThreshold"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/inventory/{variantId}/movements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stock movements of a variant, newest first, with the administrator's name.
+         * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND.
+         */
+        get: operations["ListInventoryMovements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AdjustStockRequest: {
+            /** Format: int32 */
+            quantityDelta: number;
+            reason: null | string;
+        };
+        AdminCategoryListResponse: {
+            items: components["schemas"]["AdminCategoryResponse"][];
+        };
+        AdminCategoryResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            description: null | string;
+            image: null | components["schemas"]["CategoryImageResponse"];
+            /** Format: int32 */
+            sortOrder: number;
+            isActive: boolean;
+            seoTitle: null | string;
+            seoDescription: null | string;
+            /** Format: int32 */
+            productCount: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         AdminMeResponse: {
             /** Format: uuid */
             id: string;
@@ -83,8 +612,89 @@ export interface components {
             fullName: string;
             role: components["schemas"]["AdminRole"];
         };
+        AdminProductCategory: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        AdminProductListItem: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            sku: string;
+            category: components["schemas"]["AdminProductCategory"];
+            isActive: boolean;
+            isFeatured: boolean;
+            isArchived: boolean;
+            /** Format: int32 */
+            variantCount: number;
+            /** Format: double */
+            priceFrom: null | number;
+            hasPriceRange: boolean;
+            /** Format: int32 */
+            totalStock: number;
+            stockStatus: components["schemas"]["StockStatus"];
+            mainImage: null | components["schemas"]["ProductImageResponse"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        AdminProductResponse: {
+            /** Format: uuid */
+            id: string;
+            category: components["schemas"]["AdminProductCategory"];
+            name: string;
+            slug: string;
+            shortDescription: string;
+            description: string;
+            sku: string;
+            isActive: boolean;
+            isFeatured: boolean;
+            isArchived: boolean;
+            seoTitle: null | string;
+            seoDescription: null | string;
+            variants: components["schemas"]["AdminVariantResponse"][];
+            images: components["schemas"]["ProductImageResponse"][];
+            /** Format: uint32 */
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            archivedAt: null | string;
+        };
         /** @enum {unknown} */
         AdminRole: "Staff" | "Owner";
+        AdminVariantResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            sku: string;
+            /** Format: double */
+            unitAmount: number;
+            measurementUnit: components["schemas"]["MeasurementUnit"];
+            /** Format: double */
+            regularPrice: number;
+            /** Format: double */
+            discountPrice: null | number;
+            /** Format: double */
+            effectivePrice: number;
+            isActive: boolean;
+            /** Format: int32 */
+            sortOrder: number;
+            /** Format: int32 */
+            quantityOnHand: number;
+            /** Format: int32 */
+            lowStockThreshold: number;
+            stockStatus: components["schemas"]["StockStatus"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         ApiProblem: {
             type: string;
             title: string;
@@ -97,8 +707,260 @@ export interface components {
             };
             traceId?: null | string;
         };
+        AttachProductImageRequest: {
+            uploadKey: null | string;
+            altText: null | string;
+        };
+        CategoryImageResponse: {
+            key: string;
+            baseUrl: string;
+            widths: number[];
+            /** Format: int32 */
+            width: number;
+            /** Format: int32 */
+            height: number;
+        };
+        CreateProductRequest: {
+            variants?: null | components["schemas"]["CreateVariantRequest"][];
+            /** Format: uuid */
+            categoryId?: null | string;
+            name?: null | string;
+            slug?: null | string;
+            shortDescription?: null | string;
+            description?: null | string;
+            sku?: null | string;
+            isActive?: boolean;
+            isFeatured?: boolean;
+            seoTitle?: null | string;
+            seoDescription?: null | string;
+        };
+        CreateUploadUrlRequest: {
+            fileName: null | string;
+            contentType: null | string;
+            /** Format: int64 */
+            size: number;
+            purpose: null | string;
+        };
+        CreateVariantRequest: {
+            /** Format: int32 */
+            initialStock?: number;
+            /** Format: int32 */
+            lowStockThreshold?: number;
+            name?: null | string;
+            sku?: null | string;
+            /** Format: double */
+            unitAmount?: null | number;
+            measurementUnit?: null | components["schemas"]["MeasurementUnit"];
+            /** Format: double */
+            regularPrice?: null | number;
+            /** Format: double */
+            discountPrice?: null | number;
+            isActive?: boolean;
+            /** Format: int32 */
+            sortOrder?: null | number;
+        };
         HealthResponse: {
             status: string;
+        };
+        InventoryItemResponse: {
+            /** Format: uuid */
+            variantId: string;
+            /** Format: uuid */
+            productId: string;
+            productName: string;
+            variantName: string;
+            sku: string;
+            /** Format: int32 */
+            quantityOnHand: number;
+            /** Format: int32 */
+            lowStockThreshold: number;
+            status: components["schemas"]["StockStatus"];
+            isActive: boolean;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        InventoryMovementResponse: {
+            /** Format: uuid */
+            id: string;
+            movementType: components["schemas"]["InventoryMovementType"];
+            /** Format: int32 */
+            quantityDelta: number;
+            /** Format: int32 */
+            quantityAfter: number;
+            reason: null | string;
+            /** Format: uuid */
+            orderId: null | string;
+            /** Format: uuid */
+            adminUserId: null | string;
+            adminName: null | string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @enum {unknown} */
+        InventoryMovementType: "InitialStock" | "ManualAdjustment" | "OrderPlaced" | "OrderCancelled" | "ReturnRestock";
+        LowStockResponse: {
+            items: components["schemas"]["InventoryItemResponse"][];
+            /** Format: int32 */
+            totalItems: number;
+        };
+        /** @enum {unknown} */
+        MeasurementUnit: "g" | "kg" | "ml" | "l" | "kom";
+        PagedResultOfAdminProductListItem: {
+            items: components["schemas"]["AdminProductListItem"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalItems: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PagedResultOfInventoryItemResponse: {
+            items: components["schemas"]["InventoryItemResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalItems: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PagedResultOfInventoryMovementResponse: {
+            items: components["schemas"]["InventoryMovementResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalItems: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PagedResultOfPublicProductListItem: {
+            items: components["schemas"]["PublicProductListItem"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalItems: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        ProductImageResponse: {
+            /** Format: uuid */
+            id: string;
+            altText: null | string;
+            isMain: boolean;
+            /** Format: int32 */
+            sortOrder: number;
+            baseUrl: string;
+            widths: number[];
+            /** Format: int32 */
+            width: number;
+            /** Format: int32 */
+            height: number;
+        };
+        PublicAvailabilityItem: {
+            /** Format: uuid */
+            variantId: string;
+            /** Format: uuid */
+            productId: string;
+            /** Format: double */
+            price: number;
+            /** Format: double */
+            regularPrice: number;
+            /** Format: double */
+            discountPrice: null | number;
+            inStock: boolean;
+            /** Format: int32 */
+            maxOrderQuantity: number;
+        };
+        PublicAvailabilityResponse: {
+            items: components["schemas"]["PublicAvailabilityItem"][];
+        };
+        PublicCategoryDetailResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            description: null | string;
+            image: null | components["schemas"]["PublicImageResponse"];
+            /** Format: int32 */
+            productCount: number;
+            seo: components["schemas"]["PublicSeo"];
+        };
+        PublicCategoryListResponse: {
+            items: components["schemas"]["PublicCategoryResponse"][];
+        };
+        PublicCategoryResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            description: null | string;
+            image: null | components["schemas"]["PublicImageResponse"];
+            /** Format: int32 */
+            productCount: number;
+        };
+        PublicImageResponse: {
+            baseUrl: string;
+            widths: number[];
+            /** Format: int32 */
+            width: number;
+            /** Format: int32 */
+            height: number;
+            altText: null | string;
+        };
+        PublicProductCategory: {
+            name: string;
+            slug: string;
+        };
+        PublicProductListItem: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            shortDescription: string;
+            category: components["schemas"]["PublicProductCategory"];
+            isFeatured: boolean;
+            /** Format: double */
+            price: number;
+            /** Format: double */
+            originalPrice: null | number;
+            hasPriceRange: boolean;
+            inStock: boolean;
+            image: null | components["schemas"]["PublicImageResponse"];
+        };
+        PublicProductListResponse: {
+            items: components["schemas"]["PublicProductListItem"][];
+        };
+        PublicProductResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            shortDescription: string;
+            description: string;
+            category: components["schemas"]["PublicProductCategory"];
+            isFeatured: boolean;
+            /** Format: double */
+            price: number;
+            /** Format: double */
+            originalPrice: null | number;
+            hasPriceRange: boolean;
+            inStock: boolean;
+            variants: components["schemas"]["PublicVariantResponse"][];
+            images: components["schemas"]["PublicImageResponse"][];
+            seo: components["schemas"]["PublicSeo"];
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        PublicSeo: {
+            title: null | string;
+            description: null | string;
         };
         PublicStoreContact: {
             email: null | string;
@@ -136,6 +998,96 @@ export interface components {
             facebookUrl: null | string;
             instagramUrl: null | string;
             otherLinks: components["schemas"]["PublicStoreLink"][];
+        };
+        PublicVariantResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            sku: string;
+            /** Format: double */
+            unitAmount: number;
+            measurementUnit: components["schemas"]["MeasurementUnit"];
+            /** Format: double */
+            price: number;
+            /** Format: double */
+            regularPrice: number;
+            /** Format: double */
+            discountPrice: null | number;
+            inStock: boolean;
+            /** Format: int32 */
+            maxOrderQuantity: number;
+        };
+        ReorderCategoriesRequest: {
+            ids: null | string[];
+        };
+        ReorderProductImagesRequest: {
+            imageIds: null | string[];
+            /** Format: uuid */
+            mainImageId: null | string;
+        };
+        SaveCategoryRequest: {
+            name: null | string;
+            slug: null | string;
+            description: null | string;
+            imageKey: null | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            sortOrder: number;
+            /** @default true */
+            isActive: boolean;
+            seoTitle?: null | string;
+            seoDescription?: null | string;
+        };
+        SetLowStockThresholdRequest: {
+            /** Format: int32 */
+            lowStockThreshold: number;
+        };
+        /** @enum {unknown} */
+        StockStatus: "ok" | "low" | "out";
+        UpdateProductImageRequest: {
+            altText: null | string;
+        };
+        UpdateProductRequest: {
+            /** Format: uint32 */
+            version?: null | number;
+            /** Format: uuid */
+            categoryId?: null | string;
+            name?: null | string;
+            slug?: null | string;
+            shortDescription?: null | string;
+            description?: null | string;
+            sku?: null | string;
+            isActive?: boolean;
+            isFeatured?: boolean;
+            seoTitle?: null | string;
+            seoDescription?: null | string;
+        };
+        UploadUrlResponse: {
+            uploadUrl: string;
+            fields: {
+                [key: string]: string;
+            };
+            key: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: int64 */
+            maxSize: number;
+        };
+        VariantRequest: {
+            name?: null | string;
+            sku?: null | string;
+            /** Format: double */
+            unitAmount?: null | number;
+            measurementUnit?: null | components["schemas"]["MeasurementUnit"];
+            /** Format: double */
+            regularPrice?: null | number;
+            /** Format: double */
+            discountPrice?: null | number;
+            isActive?: boolean;
+            /** Format: int32 */
+            sortOrder?: null | number;
         };
     };
     responses: never;
@@ -215,6 +1167,200 @@ export interface operations {
             };
         };
     };
+    GetCatalogCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCategoryListResponse"];
+                };
+            };
+        };
+    };
+    GetCatalogCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCategoryDetailResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetCatalogProducts: {
+        parameters: {
+            query?: {
+                category?: string;
+                q?: string;
+                minPrice?: number;
+                maxPrice?: number;
+                inStock?: boolean;
+                featured?: boolean;
+                sort?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagedResultOfPublicProductListItem"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetCatalogProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicProductResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetCatalogRelatedProducts: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicProductListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetCatalogAvailability: {
+        parameters: {
+            query?: {
+                variantIds?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicAvailabilityResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
     GetAdminMe: {
         parameters: {
             query?: never;
@@ -244,6 +1390,1495 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    CreateMediaUploadUrl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUploadUrlRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadUrlResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetDashboardLowStock: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LowStockResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListAdminCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCategoryListResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    CreateAdminCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveCategoryRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCategoryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ReorderAdminCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderCategoriesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCategoryListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetAdminCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCategoryResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    UpdateAdminCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveCategoryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCategoryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ArchiveAdminCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListAdminProducts: {
+        parameters: {
+            query?: {
+                q?: string;
+                category?: string;
+                status?: string;
+                archived?: boolean;
+                sort?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagedResultOfAdminProductListItem"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    CreateAdminProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProductRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminProductResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetAdminProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminProductResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    UpdateAdminProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminProductResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ArchiveAdminProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminProductResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    RestoreAdminProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminProductResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    AddAdminProductVariant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateVariantRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminProductResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    UpdateAdminProductVariant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                variantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VariantRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminProductResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ArchiveAdminProductVariant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                variantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminProductResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    AttachAdminProductImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttachProductImageRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminProductResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ReorderAdminProductImages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderProductImagesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminProductResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    UpdateAdminProductImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                imageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductImageRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminProductResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    DeleteAdminProductImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                imageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminProductResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListInventory: {
+        parameters: {
+            query?: {
+                q?: string;
+                status?: string;
+                sort?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagedResultOfInventoryItemResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    AdjustInventory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                variantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustStockRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InventoryItemResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    SetInventoryThreshold: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                variantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetLowStockThresholdRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InventoryItemResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListInventoryMovements: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                variantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagedResultOfInventoryMovementResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

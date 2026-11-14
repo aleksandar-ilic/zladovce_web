@@ -52,10 +52,13 @@ frontend/
 │       ├── config/{development,production}/config.json
 │       └── src/app/
 │           ├── core/         navigation config, shell (side navigation, top bar)
-│           ├── features/     sign-in, dashboard, not-found
+│           ├── data/         API clients: categories, products, inventory, media upload
+│           ├── shared/       confirm dialog, image upload, rich-text editor, server-error mapping,
+│           │                 unsaved-changes guard, list query helpers
+│           ├── features/     sign-in, dashboard, products, categories, inventory, not-found
 │           └── app.routes.ts
 └── libs/
-    ├── models/      API contract types (hand-written for now; generated/ for OpenAPI output)
+    ├── models/      API contract types (generated/ from OpenAPI, re-exported as named aliases)
     ├── api/         runtime config, ApiClient, HealthClient, interceptors, ApiError
     ├── auth/        AuthService (Cognito / dev), interceptor, guards, role directive – admin only
     ├── ui/          design tokens (styles/), button, form field, card, badge, spinner, states
@@ -174,7 +177,40 @@ To try another dev identity, edit `apps/admin/config/development/config.json`
 
 ## API types
 
-`libs/models` holds the hand-written types used today (`ProblemDetails`, `Paged<T>`, `AdminMe`,
-`AdminRole`). `npm run generate:models` writes `libs/models/src/generated/zladovce-v1.ts` from
+`libs/models` holds a few hand-written types (`ProblemDetails`, `Paged<T>`, `AdminMe`, `AdminRole`)
+and named aliases of the generated contract (`AdminProduct`, `AdminCategory`, `InventoryItem` …).
+`npm run generate:models` writes `libs/models/src/generated/zladovce-v1.ts` from
 the backend OpenAPI document and fails with a clear message when that document is missing.
 It is run by hand after the contract changes and is not part of the build.
+
+## Admin catalog (Phase 3)
+
+| Page | Route | Notes |
+|---|---|---|
+| Proizvodi | `/proizvodi` | Search, category / sale / archived filters, sort and paging live in the URL query (Back and refresh keep them). |
+| Novi proizvod, Izmena proizvoda | `/proizvodi/novi`, `/proizvodi/:id` | One form; see below. |
+| Kategorije | `/kategorije`, `/kategorije/nova`, `/kategorije/:id` | Order by drag and drop or arrows (saved at once), one image, SEO under "Napredno / SEO". |
+| Zalihe | `/zalihe` | "Promeni stanje" (+/−, mandatory reason, resulting stock shown first), low-stock threshold, movement history. |
+| Kontrolna tabla | `/` | "Malo na stanju" card linking to the filtered inventory. |
+
+- **Product saving.** A new product is created with all its packages (variants), opening stock and
+  thresholds in one request; the page then switches to editing so photos can be added. On an existing
+  product "Sačuvaj izmene" sends, one request at a time: the product fields (PUT with the latest
+  `version`), each changed package (PUT), each new package (POST). Every response is the whole product
+  and its `version` is used by the next request, so the sequence never conflicts with itself. If a step
+  fails, earlier steps stay saved and the failing package shows its errors. `409 CONCURRENT_EDIT` shows
+  a plain explanation and "Učitaj najnoviju verziju". Removing a saved package and every photo action
+  are saved immediately (with confirmation where something is deleted).
+- **Image upload** (`data/media-upload.ts`, `shared/image-upload.ts`). Type (JPG/PNG/WebP) and size
+  (10 MB) are checked in the browser; then `POST /admin/media/upload-url` and a multipart POST straight
+  to the storage with every `fields` entry in order and the file last. The storage request uses a bare
+  `HttpClient` on `HttpBackend`, so no interceptor (credentials, correlation id, dev headers) touches it.
+  Attaching retries `409 IMAGE_NOT_READY` (5 × 2 s). Several files can be chosen or dropped at once;
+  they upload one by one, each with its own preview and progress.
+- **Rich text** (`shared/rich-text-editor.ts`). A small `contenteditable` editor (bold, italic,
+  headings, lists, links) without a third-party library. Every change and every paste goes through
+  `sanitizeRichText`, which keeps only what the API keeps (p, br, strong, em, u, s, ul, ol, li, h2–h4,
+  blockquote, a[href,title], hr).
+- **Server validation errors** (`shared/server-errors.ts`). `errors` keys such as
+  `variants[0].discountPrice` are put on the matching (nested) form control and shown under the field.
+- Leaving a form with unsaved changes asks first (route guard and `beforeunload`).

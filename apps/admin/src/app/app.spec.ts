@@ -24,6 +24,7 @@ import { ADMIN_NAV } from './core/navigation';
 const API = 'http://localhost:5080/api/v1';
 const ME_URL = `${API}/admin/me`;
 const HEALTH_URL = 'http://localhost:5080/health';
+const LOW_STOCK_URL = `${API}/admin/dashboard/low-stock`;
 const DEV: AuthConfig = { mode: 'dev', dev: { email: 'vlasnik@zladovce.local', role: 'Owner' } };
 const COGNITO: AuthConfig = {
   mode: 'cognito',
@@ -413,11 +414,56 @@ describe('shell and dashboard', () => {
     await settle(ctx.fixture);
     const links = [...ctx.root.querySelectorAll('mat-sidenav nav a')];
     expect(links.map(text)).toEqual(ADMIN_NAV.map((item) => item.label));
-    expect(links.map(text)).toEqual(['Kontrolna tabla']);
-    expect(links[0]?.getAttribute('href')).toBe('/');
+    expect(links.map(text)).toEqual(['Kontrolna tabla', 'Proizvodi', 'Kategorije', 'Zalihe']);
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/',
+      '/proizvodi',
+      '/kategorije',
+      '/zalihe',
+    ]);
     expect(links[0]?.getAttribute('aria-current')).toBe('page');
     expect(ctx.root.querySelector('a.skip-link')).not.toBeNull();
     expect(ctx.root.querySelector('main#sadrzaj')).not.toBeNull();
+  });
+
+  it('has a route for every navigation entry', () => {
+    const shell = routes.find((route) => route.path === '' && route.children);
+    const paths = (shell?.children ?? []).map((route) => `/${route.path ?? ''}`);
+    for (const item of ADMIN_NAV) {
+      expect(paths).toContain(item.path);
+    }
+  });
+
+  it('shows the low-stock card with real data and a link to the filtered inventory', async () => {
+    const ctx = await openDashboard();
+    ctx.controller.expectOne(ME_URL).flush(OWNER);
+    ctx.controller.expectOne(HEALTH_URL).flush('Healthy');
+    const lowStock = ctx.controller.expectOne((r) => r.url === LOW_STOCK_URL);
+    expect(lowStock.request.params.get('limit')).toBe('5');
+    lowStock.flush({
+      items: [
+        {
+          variantId: 'v1',
+          productId: 'p1',
+          productName: 'Džem od šljiva',
+          variantName: '370 g',
+          sku: 'DZEM-370G',
+          quantityOnHand: 2,
+          lowStockThreshold: 5,
+          status: 'low',
+          isActive: true,
+          updatedAt: '2026-11-14T10:00:00Z',
+        },
+      ],
+      totalItems: 1,
+    });
+    await settle(ctx.fixture);
+    const card = ctx.root.querySelector('[data-testid="low-stock"]');
+    expect(text(card)).toContain('Malo na stanju');
+    expect(text(card)).toContain('Džem od šljiva – 370 g');
+    expect(card?.querySelector('[data-testid="low-stock-link"]')?.getAttribute('href')).toBe(
+      '/zalihe?status=low',
+    );
   });
 
   it('signs out and returns to the sign-in page', async () => {

@@ -6,7 +6,11 @@ import { authInterceptor, provideAuth } from '@zladovce/auth';
 import { provideSerbianLocale } from '@zladovce/utilities';
 import { routes } from './app.routes';
 
-/** APP_CONFIG is provided in main.ts after /config.json has been loaded. */
+/**
+ * APP_CONFIG is provided in main.ts after /config.json has been loaded.
+ * Angular Material pieces used only by some pages (paginator texts, dialogs) are provided by
+ * those pages, so they stay out of the initial bundle.
+ */
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),

@@ -88,3 +88,64 @@ html {
     )
   );
 }
+
+// Destructive confirm buttons (archive, delete, discard changes).
+.mat-mdc-button-base.danger-button:not(:disabled) {
+  --mat-button-filled-container-color: var(--color-danger-600);
+  --mat-button-filled-label-text-color: var(--color-white);
+  --mat-button-outlined-label-text-color: var(--color-danger-700);
+  --mat-button-text-label-text-color: var(--color-danger-700);
+}
+
+// Drag and drop (categories, product images).
+.cdk-drag-preview {
+  box-shadow: var(--shadow-card);
+  border-radius: var(--radius-lg);
+}
+.cdk-drag-placeholder {
+  opacity: 0.35;
+}
+.cdk-drag-animating,
+.cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+// Rich text (product descriptions) – the editor shows the same structure the shop renders.
+.rich-text {
+  h2 {
+    font-family: var(--font-serif);
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0.75rem 0 0.5rem;
+  }
+  h3,
+  h4 {
+    font-family: var(--font-serif);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0.75rem 0 0.5rem;
+  }
+  p {
+    margin: 0 0 0.5rem;
+  }
+  ul,
+  ol {
+    margin: 0 0 0.5rem;
+    padding-left: 1.5rem;
+  }
+  ul {
+    list-style: disc;
+  }
+  ol {
+    list-style: decimal;
+  }
+  blockquote {
+    border-left: 3px solid var(--color-sage-400);
+    padding-left: 0.75rem;
+    color: var(--color-ink-700);
+  }
+  a {
+    color: var(--color-olive-700);
+    text-decoration: underline;
+  }
+}
