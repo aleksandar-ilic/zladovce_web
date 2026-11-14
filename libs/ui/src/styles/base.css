@@ -1,0 +1,89 @@
+/*
+ * Base element styles shared by both apps. Import after theme.css.
+ */
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    font-size: 100%;
+    color: var(--color-ink-900);
+    background-color: var(--color-cream-50);
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    min-height: 100dvh;
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--color-olive-900);
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* One consistent, clearly visible keyboard focus indicator. */
+  :focus-visible {
+    outline: 2px solid var(--color-olive-700);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-olive-200);
+    color: var(--color-olive-900);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Skip link: first focusable element of every page, visible only on keyboard focus. */
+  .skip-link {
+    position: absolute;
+    left: 1rem;
+    top: 0;
+    z-index: 100;
+    transform: translateY(-150%);
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    background-color: var(--color-olive-800);
+    padding: 0.625rem 1rem;
+    font-weight: 600;
+    color: var(--color-white);
+  }
+
+  .skip-link:focus {
+    transform: translateY(0);
+  }
+
+  /* Small uppercase label above headings. */
+  .eyebrow {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    color: var(--color-olive-600);
+  }
+}

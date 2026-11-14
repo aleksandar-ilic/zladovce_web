@@ -1,0 +1,8 @@
+/* Type-checks and runs the unit tests of all libraries (ng test libs). */
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["vitest/globals"]
+  },
+  "include": ["**/*.d.ts", "**/*.spec.ts"]
+}

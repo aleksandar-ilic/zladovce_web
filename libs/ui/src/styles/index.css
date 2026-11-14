@@ -1,0 +1,11 @@
+/*
+ * Shared Tailwind preset of the workspace: design tokens + base styles.
+ * Usage in an app stylesheet:
+ *
+ *   @import 'tailwindcss' source(none);
+ *   @import '../../../libs/ui/src/styles/index.css';
+ *   @source './';
+ *   @source '../../../libs';
+ */
+@import './theme.css';
+@import './base.css';

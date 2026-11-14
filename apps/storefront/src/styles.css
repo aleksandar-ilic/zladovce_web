@@ -1,0 +1,10 @@
+/*
+ * Storefront global styles: Tailwind + the shared Zladovce preset (tokens and base styles).
+ * Fonts are self-hosted and listed in angular.json (styles).
+ * Class names are collected only from this app and the libraries.
+ */
+@import 'tailwindcss' source(none);
+@import '../../../libs/ui/src/styles/index.css';
+
+@source './';
+@source '../../../libs';

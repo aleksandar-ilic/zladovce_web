@@ -1,0 +1,11 @@
+{
+  "apiBaseUrl": "",
+  "auth": {
+    "mode": "cognito",
+    "cognito": {
+      "region": "",
+      "userPoolId": "",
+      "clientId": ""
+    }
+  }
+}

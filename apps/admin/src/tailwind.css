@@ -1,0 +1,10 @@
+/*
+ * Admin global styles, part 1: Tailwind utilities + the shared Zladovce preset
+ * (design tokens and base styles). The Angular Material theme is in styles.scss and
+ * reads the same tokens. Kept as plain CSS because Tailwind v4 is not run through Sass.
+ */
+@import 'tailwindcss' source(none);
+@import '../../../libs/ui/src/styles/index.css';
+
+@source './';
+@source '../../../libs';

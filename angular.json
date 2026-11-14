@@ -1,0 +1,212 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "cli": {
+    "packageManager": "npm"
+  },
+  "newProjectRoot": "apps",
+  "projects": {
+    "storefront": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "changeDetection": "OnPush",
+          "style": "none",
+          "inlineTemplate": true
+        }
+      },
+      "root": "apps/storefront",
+      "sourceRoot": "apps/storefront/src",
+      "prefix": "sf",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "apps/storefront/src/main.ts",
+            "tsConfig": "apps/storefront/tsconfig.app.json",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "apps/storefront/public"
+              },
+              {
+                "glob": "config.json",
+                "input": "apps/storefront/config/production"
+              }
+            ],
+            "styles": [
+              "@fontsource/cormorant-garamond/500.css",
+              "@fontsource/cormorant-garamond/600.css",
+              "@fontsource-variable/source-sans-3/wght.css",
+              "apps/storefront/src/styles.css"
+            ],
+            "server": "apps/storefront/src/main.server.ts",
+            "outputMode": "static"
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "apps/storefront/public"
+                },
+                {
+                  "glob": "config.json",
+                  "input": "apps/storefront/config/development"
+                }
+              ]
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "storefront:build:production"
+            },
+            "development": {
+              "buildTarget": "storefront:build:development"
+            }
+          },
+          "defaultConfiguration": "development",
+          "options": {
+            "port": 4200
+          }
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "apps/storefront/tsconfig.spec.json"
+          }
+        }
+      }
+    },
+    "admin": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "changeDetection": "OnPush",
+          "style": "none",
+          "inlineTemplate": true
+        }
+      },
+      "root": "apps/admin",
+      "sourceRoot": "apps/admin/src",
+      "prefix": "adm",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "apps/admin/src/main.ts",
+            "tsConfig": "apps/admin/tsconfig.app.json",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "apps/admin/public"
+              },
+              {
+                "glob": "config.json",
+                "input": "apps/admin/config/production"
+              }
+            ],
+            "styles": [
+              "@fontsource/cormorant-garamond/500.css",
+              "@fontsource/cormorant-garamond/600.css",
+              "@fontsource-variable/source-sans-3/wght.css",
+              "apps/admin/src/tailwind.css",
+              "apps/admin/src/styles.scss"
+            ]
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "apps/admin/public"
+                },
+                {
+                  "glob": "config.json",
+                  "input": "apps/admin/config/development"
+                }
+              ]
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "admin:build:production"
+            },
+            "development": {
+              "buildTarget": "admin:build:development"
+            }
+          },
+          "defaultConfiguration": "development",
+          "options": {
+            "port": 4201
+          }
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "apps/admin/tsconfig.spec.json"
+          }
+        }
+      }
+    },
+    "libs": {
+      "projectType": "library",
+      "root": "libs",
+      "sourceRoot": "libs",
+      "prefix": "ui",
+      "architect": {
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "buildTarget": "admin:build:development",
+            "tsConfig": "libs/tsconfig.spec.json"
+          }
+        }
+      }
+    }
+  }
+}

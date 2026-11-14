@@ -1,0 +1,90 @@
+// Admin global styles, part 2: Angular Material (M3) themed with the Zladovce design tokens.
+//
+// Colours, fonts and radii are not repeated here: every value is a reference to a custom
+// property defined once in libs/ui/src/styles/theme.css (loaded by tailwind.css).
+@use '@angular/material' as mat;
+
+html {
+  color-scheme: light;
+
+  // Baseline theme: generates all Material system tokens (the palette below is only a
+  // starting point and is replaced by the brand overrides that follow).
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$green-palette,
+        theme-type: light,
+      ),
+      typography: (
+        plain-family: var(--font-sans),
+        brand-family: var(--font-serif),
+        bold-weight: 600,
+        medium-weight: 600,
+        regular-weight: 400,
+      ),
+      density: 0,
+    )
+  );
+
+  // Brand colours → Material system colour roles.
+  @include mat.theme-overrides(
+    (
+      primary: var(--color-olive-700),
+      on-primary: var(--color-white),
+      primary-container: var(--color-olive-100),
+      on-primary-container: var(--color-olive-900),
+      secondary: var(--color-sage-600),
+      on-secondary: var(--color-white),
+      secondary-container: var(--color-sage-100),
+      on-secondary-container: var(--color-sage-700),
+      tertiary: var(--color-earth-600),
+      on-tertiary: var(--color-white),
+      tertiary-container: var(--color-earth-100),
+      on-tertiary-container: var(--color-earth-700),
+      error: var(--color-danger-600),
+      on-error: var(--color-white),
+      error-container: var(--color-danger-50),
+      on-error-container: var(--color-danger-700),
+      background: var(--color-cream-50),
+      on-background: var(--color-ink-900),
+      surface: var(--color-cream-50),
+      on-surface: var(--color-ink-900),
+      on-surface-variant: var(--color-ink-700),
+      surface-container-lowest: var(--color-white),
+      surface-container-low: var(--color-cream-50),
+      surface-container: var(--color-cream-100),
+      surface-container-high: var(--color-cream-200),
+      surface-container-highest: var(--color-cream-200),
+      surface-variant: var(--color-cream-200),
+      outline: var(--color-sage-500),
+      outline-variant: var(--color-cream-300),
+      inverse-surface: var(--color-olive-900),
+      inverse-on-surface: var(--color-cream-50),
+      inverse-primary: var(--color-olive-200),
+      // Rounded but restrained: Material's pill shapes become the brand radii.
+      corner-extra-small: var(--radius-sm),
+      corner-small: var(--radius-md),
+      corner-medium: var(--radius-lg),
+      corner-large: var(--radius-lg),
+      corner-extra-large: var(--radius-xl),
+      corner-full: var(--radius-md),
+    )
+  );
+}
+
+// Material components keep the brand focus indicator for keyboard users.
+.mat-mdc-button-base:focus-visible,
+.mat-mdc-list-item:focus-visible {
+  outline: 2px solid var(--color-olive-700);
+  outline-offset: 2px;
+}
+
+// Component-level adjustments.
+html {
+  @include mat.sidenav-overrides(
+    (
+      container-width: 16rem,
+      container-shape: 0,
+    )
+  );
+}

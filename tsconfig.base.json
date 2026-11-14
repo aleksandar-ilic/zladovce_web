@@ -1,0 +1,31 @@
+/* Shared compiler options and the @zladovce/* path aliases. Every project tsconfig extends this file. */
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "preserve",
+    "paths": {
+      "@zladovce/models": ["./libs/models/src/index.ts"],
+      "@zladovce/api": ["./libs/api/src/index.ts"],
+      "@zladovce/auth": ["./libs/auth/src/index.ts"],
+      "@zladovce/ui": ["./libs/ui/src/index.ts"],
+      "@zladovce/shared": ["./libs/shared/src/index.ts"],
+      "@zladovce/utilities": ["./libs/utilities/src/index.ts"]
+    }
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true
+  }
+}

@@ -1,0 +1,114 @@
+/*
+ * Zladovce design tokens – the single source of truth.
+ *
+ * Tailwind v4 turns every variable in @theme into (a) a CSS custom property on :root and
+ * (b) the matching utility classes (bg-olive-700, font-serif, rounded-lg, shadow-card …).
+ * Angular Material in the admin app reads the same custom properties
+ * (apps/admin/src/styles.scss), so a token is defined exactly once, here.
+ *
+ * Must be imported after `@import 'tailwindcss'`.
+ */
+@theme {
+  /* ---- Colour: only the brand palette exists, Tailwind's default colours are removed ---- */
+  --color-*: initial;
+
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  /* Warm cream – page and surface backgrounds */
+  --color-cream-50: #fdfbf6;
+  --color-cream-100: #f9f4ea;
+  --color-cream-200: #f1e9d8;
+  --color-cream-300: #e6dac1;
+
+  /* Olive green – primary brand colour, actions */
+  --color-olive-50: #f4f5ec;
+  --color-olive-100: #e6e9d3;
+  --color-olive-200: #cdd3a9;
+  --color-olive-300: #aeb878;
+  --color-olive-400: #8f9b51;
+  --color-olive-500: #727e39;
+  --color-olive-600: #5a652c;
+  --color-olive-700: #474f25;
+  --color-olive-800: #3a4021;
+  --color-olive-900: #2f341d;
+
+  /* Sage green – secondary surfaces, borders, quiet accents */
+  --color-sage-50: #f3f6f1;
+  --color-sage-100: #e3eadf;
+  --color-sage-200: #c8d5c1;
+  --color-sage-300: #a5b89c;
+  --color-sage-400: #829a78;
+  --color-sage-500: #647e5b;
+  --color-sage-600: #4e6447;
+  --color-sage-700: #3f503a;
+
+  /* Earth – warm natural accent (fruit, clay, wood) */
+  --color-earth-50: #faf4ee;
+  --color-earth-100: #f1e2d3;
+  --color-earth-200: #e2c4a6;
+  --color-earth-300: #cf9f75;
+  --color-earth-500: #a8693d;
+  --color-earth-600: #8c5230;
+  --color-earth-700: #6f3f27;
+
+  /* Ink – text */
+  --color-ink-500: #6a6a5d;
+  --color-ink-700: #4a4a3f;
+  --color-ink-900: #2a2a22;
+
+  /* Feedback */
+  --color-danger-50: #fbefec;
+  --color-danger-600: #a63a2b;
+  --color-danger-700: #862d21;
+  --color-warning-50: #fbf3df;
+  --color-warning-700: #7d560f;
+
+  /* ---- Typography ---- */
+  --font-serif: 'Cormorant Garamond', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --font-sans:
+    'Source Sans 3 Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.375rem;
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.75rem;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.875rem;
+  --text-xl: 1.5rem;
+  --text-xl--line-height: 2rem;
+  --text-2xl: 1.875rem;
+  --text-2xl--line-height: 2.25rem;
+  --text-3xl: 2.375rem;
+  --text-3xl--line-height: 2.75rem;
+  --text-4xl: 3rem;
+  --text-4xl--line-height: 3.25rem;
+  /* Fluid display size for hero headlines */
+  --text-display: clamp(2.625rem, 1.6rem + 4.4vw, 4.5rem);
+  --text-display--line-height: 1.05;
+
+  --tracking-eyebrow: 0.14em;
+
+  /* ---- Spacing and layout (Tailwind's 0.25rem step stays the base unit) ---- */
+  --spacing: 0.25rem;
+  --spacing-gutter: 1.25rem;
+  --spacing-section: clamp(3.5rem, 2rem + 6vw, 6.5rem);
+  --container-page: 76rem;
+  --container-prose: 40rem;
+
+  /* ---- Radius: rounded but restrained ---- */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  /* ---- Shadow: soft, olive-tinted ---- */
+  --shadow-soft: 0 1px 2px rgb(47 52 29 / 0.06), 0 1px 1px rgb(47 52 29 / 0.04);
+  --shadow-card: 0 1px 2px rgb(47 52 29 / 0.05), 0 10px 28px -14px rgb(47 52 29 / 0.22);
+  --shadow-overlay: 0 24px 48px -16px rgb(47 52 29 / 0.35);
+
+  /* ---- Motion: subtle only ---- */
+  --ease-gentle: cubic-bezier(0.2, 0.7, 0.2, 1);
+}

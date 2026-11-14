@@ -1,0 +1,12 @@
+/* Solution file for editors. Compiler options live in tsconfig.base.json. */
+{
+  "extends": "./tsconfig.base.json",
+  "files": [],
+  "references": [
+    { "path": "./apps/storefront/tsconfig.app.json" },
+    { "path": "./apps/storefront/tsconfig.spec.json" },
+    { "path": "./apps/admin/tsconfig.app.json" },
+    { "path": "./apps/admin/tsconfig.spec.json" },
+    { "path": "./libs/tsconfig.spec.json" }
+  ]
+}
