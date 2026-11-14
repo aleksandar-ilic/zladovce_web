@@ -10,20 +10,28 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationStart, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { CartStore } from '@zladovce/shared';
-import { CART_PATH, MAIN_NAV } from '../navigation';
+import { filter } from 'rxjs';
+import { CategoriesStore } from '../data/categories-store';
+import { CART_PATH, MAIN_NAV, SHOP_PATH } from '../navigation';
 
 /**
- * Site header: wordmark, main navigation, cart link with item count and, on small screens,
- * a navigation drawer. The drawer is a modal dialog: focus is trapped inside it, Escape and
- * the backdrop close it, and focus returns to the menu button.
+ * Site header: wordmark, main navigation (with a small category menu next to "Prodavnica"),
+ * cart link with item count and, on small screens, a navigation drawer. The drawer is a modal
+ * dialog: focus is trapped inside it, Escape and the backdrop close it, and focus returns to
+ * the menu button. Categories are loaded when a menu is first opened.
  */
 @Component({
   selector: 'sf-header',
   imports: [RouterLink, RouterLinkActive, A11yModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'sticky top-0 z-40 block' },
+  host: {
+    class: 'sticky top-0 z-40 block',
+    '(document:click)': 'onDocumentClick($event)',
+    '(keydown.escape)': 'closeCategories(true)',
+  },
   template: `
     <!-- The blur lives on this bar, not on the host: backdrop-filter would confine the fixed drawer. -->
     <div class="border-b border-cream-200 bg-cream-50/95 backdrop-blur-sm">
@@ -41,7 +49,7 @@ import { CART_PATH, MAIN_NAV } from '../navigation';
         <nav class="hidden md:block" aria-label="Glavna navigacija">
           <ul class="flex items-center gap-1">
             @for (item of nav; track item.path) {
-              <li>
+              <li class="relative flex items-center">
                 <a
                   [routerLink]="item.path"
                   routerLinkActive="bg-olive-100 text-olive-900"
@@ -51,6 +59,72 @@ import { CART_PATH, MAIN_NAV } from '../navigation';
                 >
                   {{ item.label }}
                 </a>
+                @if (item.path === shopPath) {
+                  <button
+                    #categoriesButton
+                    type="button"
+                    class="ml-0.5 inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-ink-700 hover:bg-olive-50 hover:text-olive-900"
+                    aria-label="Kategorije proizvoda"
+                    aria-controls="sf-categories-menu"
+                    [attr.aria-expanded]="categoriesOpen()"
+                    (click)="toggleCategories()"
+                    data-testid="categories-toggle"
+                  >
+                    <svg
+                      class="size-4 transition-transform duration-150"
+                      [class.rotate-180]="categoriesOpen()"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="m4 6 4 4 4-4" />
+                    </svg>
+                  </button>
+                  @if (categoriesOpen()) {
+                    <div
+                      id="sf-categories-menu"
+                      class="absolute left-0 top-full z-50 mt-2 w-72 rounded-lg border border-cream-200 bg-white p-2 shadow-overlay"
+                      data-testid="categories-menu"
+                    >
+                      <ul class="flex flex-col">
+                        <li>
+                          <a
+                            [routerLink]="shopPath"
+                            class="block rounded-md px-3 py-2.5 font-semibold text-olive-800 hover:bg-olive-50"
+                            (click)="closeCategories()"
+                            >Sva ponuda</a
+                          >
+                        </li>
+                        @for (category of categories(); track category.id) {
+                          <li>
+                            <a
+                              [routerLink]="[shopPath, category.slug]"
+                              class="flex items-center justify-between rounded-md px-3 py-2.5 text-ink-700 hover:bg-olive-50 hover:text-olive-900"
+                              (click)="closeCategories()"
+                            >
+                              <span>{{ category.name }}</span>
+                              <span class="text-xs text-ink-500">{{ category.productCount }}</span>
+                            </a>
+                          </li>
+                        } @empty {
+                          @if (categoriesState() === 'loading') {
+                            <li class="px-3 py-2.5 text-sm text-ink-500" role="status">
+                              Učitavanje…
+                            </li>
+                          } @else if (categoriesState() === 'error') {
+                            <li class="px-3 py-2.5 text-sm text-ink-700">
+                              Kategorije trenutno nisu dostupne.
+                            </li>
+                          }
+                        }
+                      </ul>
+                    </div>
+                  }
+                }
               </li>
             }
           </ul>
@@ -163,6 +237,27 @@ import { CART_PATH, MAIN_NAV } from '../navigation';
                   >
                     {{ item.label }}
                   </a>
+                  @if (item.path === shopPath && categories().length > 0) {
+                    <ul
+                      class="mb-1 ml-4 flex flex-col border-l border-cream-200 pl-2"
+                      aria-label="Kategorije"
+                    >
+                      @for (category of categories(); track category.id) {
+                        <li>
+                          <a
+                            [routerLink]="[shopPath, category.slug]"
+                            routerLinkActive="bg-olive-100 text-olive-900"
+                            ariaCurrentWhenActive="page"
+                            class="block rounded-md px-4 py-2.5 text-base text-ink-700 hover:bg-olive-50"
+                            (click)="closeMenu()"
+                            data-testid="mobile-category"
+                          >
+                            {{ category.name }}
+                          </a>
+                        </li>
+                      }
+                    </ul>
+                  }
                 </li>
               }
               <li class="mt-2 border-t border-cream-200 pt-3">
@@ -186,12 +281,19 @@ import { CART_PATH, MAIN_NAV } from '../navigation';
 })
 export class Header {
   private readonly cart = inject(CartStore);
+  private readonly categoriesStore = inject(CategoriesStore);
   private readonly document = inject(DOCUMENT);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly menuButton = viewChild.required<ElementRef<HTMLButtonElement>>('menuButton');
+  private readonly categoriesButton = viewChild<ElementRef<HTMLButtonElement>>('categoriesButton');
 
   protected readonly nav = MAIN_NAV;
   protected readonly cartPath = CART_PATH;
+  protected readonly shopPath = SHOP_PATH;
   protected readonly menuOpen = signal(false);
+  protected readonly categoriesOpen = signal(false);
+  protected readonly categories = this.categoriesStore.categories;
+  protected readonly categoriesState = computed(() => this.categoriesStore.remote().status);
   protected readonly cartCount = this.cart.totalQuantity;
   protected readonly cartLabel = computed(() => `Korpa, broj proizvoda: ${this.cartCount()}`);
 
@@ -200,10 +302,43 @@ export class Header {
     effect(() => {
       this.document.body.style.overflow = this.menuOpen() ? 'hidden' : '';
     });
+    inject(Router)
+      .events.pipe(
+        filter((event) => event instanceof NavigationStart),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.categoriesOpen.set(false));
   }
 
   protected openMenu(): void {
+    this.categoriesStore.ensureLoaded();
     this.menuOpen.set(true);
+  }
+
+  protected toggleCategories(): void {
+    if (this.categoriesOpen()) {
+      this.closeCategories();
+      return;
+    }
+    this.categoriesStore.ensureLoaded();
+    this.categoriesOpen.set(true);
+  }
+
+  protected closeCategories(returnFocus = false): void {
+    if (!this.categoriesOpen()) {
+      return;
+    }
+    this.categoriesOpen.set(false);
+    if (returnFocus) {
+      this.categoriesButton()?.nativeElement.focus();
+    }
+  }
+
+  protected onDocumentClick(event: MouseEvent): void {
+    const target = event.target as Node | null;
+    if (this.categoriesOpen() && target && !this.host.nativeElement.contains(target)) {
+      this.categoriesOpen.set(false);
+    }
   }
 
   protected closeMenu(): void {

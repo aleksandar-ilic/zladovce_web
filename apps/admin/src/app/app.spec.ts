@@ -462,7 +462,7 @@ describe('shell and dashboard', () => {
     expect(text(card)).toContain('Malo na stanju');
     expect(text(card)).toContain('Džem od šljiva – 370 g');
     expect(card?.querySelector('[data-testid="low-stock-link"]')?.getAttribute('href')).toBe(
-      '/zalihe?status=low',
+      '/zalihe?status=low,out',
     );
   });
 

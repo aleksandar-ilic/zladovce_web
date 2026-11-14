@@ -6,7 +6,7 @@
     "start:storefront": "ng serve storefront --port 4200",
     "start:admin": "ng serve admin --port 4201",
     "build": "npm run build:storefront && npm run build:admin",
-    "build:storefront": "ng build storefront --configuration production",
+    "build:storefront": "ng build storefront --configuration production && node tools/generate-seo-files.mjs",
     "build:admin": "ng build admin --configuration production",
     "lint": "eslint . --max-warnings 0",
     "test": "ng test",

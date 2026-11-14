@@ -155,17 +155,15 @@ describe('AdjustStockDialog', () => {
     await d.render();
     d.root.querySelector('form')?.dispatchEvent(new Event('submit'));
     await d.render();
-    d.controller
-      .expectOne(`${API}/admin/inventory/${INVENTORY_ITEM.variantId}/adjustments`)
-      .flush(
-        {
-          title: 'Nedovoljno',
-          status: 409,
-          code: 'INSUFFICIENT_STOCK',
-          detail: 'Na stanju je samo 2 komada.',
-        },
-        { status: 409, statusText: 'Conflict' },
-      );
+    d.controller.expectOne(`${API}/admin/inventory/${INVENTORY_ITEM.variantId}/adjustments`).flush(
+      {
+        title: 'Nedovoljno',
+        status: 409,
+        code: 'INSUFFICIENT_STOCK',
+        detail: 'Na stanju je samo 2 komada.',
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
     await d.render();
     expect(text(d.root.querySelector('[role="alert"]'))).toBe('Na stanju je samo 2 komada.');
     expect(d.close).not.toHaveBeenCalled();
@@ -190,6 +188,17 @@ describe('inventory query ↔ URL', () => {
       page: 1,
       pageSize: 20,
     });
+  });
+
+  it('reads the "low or out" filter however the statuses are written, and writes it as low,out', () => {
+    for (const status of ['low,out', 'out,low', ['low', 'out'], ['out,low'], 'low, out']) {
+      expect(parseInventoryQuery({ status }).status).toBe('low,out');
+    }
+    expect(parseInventoryQuery({ status: 'low,ok' }).status).toBeUndefined();
+    expect(parseInventoryQuery({ status: ['low', 'low'] }).status).toBe('low');
+    expect(inventoryQueryParams(parseInventoryQuery({ status: 'out,low' }))['status']).toBe(
+      'low,out',
+    );
   });
 });
 
@@ -233,6 +242,23 @@ describe('InventoryPage', () => {
     second.flush({ items: [], page: 1, pageSize: 20, totalItems: 0, totalPages: 0 });
     await render();
     expect(text(root)).toContain('Nema pakovanja za izabrane filtere');
+  });
+
+  it('opens the dashboard link (status=low,out) and asks the API for both statuses', async () => {
+    const { harness, render, controller } = await openPage('/zalihe?status=low,out');
+    const request = controller.expectOne((r) => r.url === `${API}/admin/inventory`);
+    expect(request.request.params.get('status')).toBe('low,out');
+    request.flush({ items: [INVENTORY_ITEM], page: 1, pageSize: 20, totalItems: 1, totalPages: 1 });
+    await render();
+    const page = harness.routeDebugElement?.componentInstance as InventoryPage;
+    expect(page.query().status).toBe('low,out');
+    page.update({ status: undefined });
+    await render();
+    expect(TestBed.inject(Router).url).toBe('/zalihe');
+    controller
+      .expectOne((r) => r.url === `${API}/admin/inventory`)
+      .flush({ items: [], page: 1, pageSize: 20, totalItems: 0, totalPages: 0 });
+    await render();
   });
 
   it('shows an error state with a working retry', async () => {

@@ -3,7 +3,7 @@ import { ApiError } from '@zladovce/api';
 import { imageSrc, imageSrcset } from './images';
 import { compactParams, readEnum, readFlag, readPositiveInt, readUuid } from './list-query';
 import { normalizeHref, richTextToPlain, safeHref, sanitizeRichText } from './rich-text';
-import { applyServerErrors, fieldPath, markConflictingValue } from './server-errors';
+import { applyServerErrors, fieldPath } from './server-errors';
 
 const validation = (errors: Record<string, string[]>, code = 'VALIDATION_FAILED') =>
   new ApiError({
@@ -74,16 +74,26 @@ describe('applyServerErrors', () => {
     expect(f.controls.name.errors).toBeNull();
   });
 
-  it('marks the control holding a conflicting SKU', () => {
-    const a = new FormControl('DZEM-370G');
-    const b = new FormControl('DZEM-720G');
-    const matched = markConflictingValue(
-      [a, b],
-      'Šifra (SKU) „DZEM-720G“ se već koristi. Izaberite drugu.',
-    );
-    expect(matched).toBe(true);
-    expect(a.errors).toBeNull();
-    expect(b.errors?.['server']).toContain('se već koristi');
+  it('puts a 409 SKU_TAKEN on the variant named by its errors key', () => {
+    const f = new FormGroup({
+      sku: new FormControl('DZEM'),
+      variants: new FormArray([
+        new FormGroup({ sku: new FormControl('DZEM-370G') }),
+        new FormGroup({ sku: new FormControl('DZEM-720G') }),
+      ]),
+    });
+    const conflict = new ApiError({
+      status: 409,
+      code: 'SKU_TAKEN',
+      title: 'Konflikt',
+      detail: 'Šifra (SKU) „DZEM-720G“ se već koristi.',
+      errors: { 'variants[1].sku': ['Šifra (SKU) „DZEM-720G“ se već koristi.'] },
+    });
+    const unmatched = applyServerErrors(f, conflict);
+    expect(unmatched).toEqual([]);
+    expect(f.controls.sku.errors).toBeNull();
+    expect(f.controls.variants.at(0).controls.sku.errors).toBeNull();
+    expect(f.controls.variants.at(1).controls.sku.errors?.['server']).toContain('se već koristi');
   });
 });
 

@@ -55,6 +55,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/seo/routes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Slugs and last-modified times of the visible categories and products, for prerendering and the sitemap.
+         * @description Same visibility as the public catalog. Blog posts are added in a later phase as a new member.
+         */
+        get: operations["GetSeoRoutes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/categories": {
         parameters: {
             query?: never;
@@ -172,6 +192,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cart/quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Prices the browser cart from the database: lines, adjustments, subtotal, shipping, minimum order, total.
+         * @description The client sends variant ids and quantities only; every price comes from the database. Lines with the same variant are merged. A variant that cannot be bought (unknown, inactive, archived, hidden product or category, out of stock) is left out of `lines` and reported as `unavailable` in `adjustments`; a quantity above `maxOrderQuantity` is reduced and reported as `quantityReduced`; with the optional `knownUnitPrice` a different current price is reported as `priceChanged`. Shipping is charged unless the subtotal is at or above the free-shipping threshold; the minimum order compares the subtotal. `canCheckout` is false when shipping is disabled, there are no lines or the minimum is not met. The exact stock is never returned. Errors: 400 VALIDATION_FAILED (`items` empty or more than 50, `items[i].quantity` not 1–99, `items[i].variantId` missing or empty, `items[i].knownUnitPrice` invalid, a required member missing); 400 BAD_REQUEST (malformed JSON, a value of the wrong type such as a malformed uuid).
+         */
+        post: operations["QuoteCart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/me": {
         parameters: {
             query?: never;
@@ -217,8 +257,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Variants at or below their low-stock threshold, emptiest first. `limit` 1–100, default 10.
-         * @description Errors: 400 VALIDATION_FAILED.
+         * Variants with status `low` or `out` (at or below their low-stock threshold), emptiest first. `limit` 1–100, default 10.
+         * @description Same rows as `GET /admin/inventory?status=low,out` (`totalItems` matches); the dashboard card should link there. Errors: 400 VALIDATION_FAILED.
          */
         get: operations["GetDashboardLowStock"];
         put?: never;
@@ -241,7 +281,7 @@ export interface paths {
         put?: never;
         /**
          * Create a category. The slug is generated from the name when not given.
-         * @description Errors: 400 VALIDATION_FAILED, INVALID_IMAGE, UPLOAD_NOT_FOUND; 409 SLUG_TAKEN, IMAGE_NOT_READY, IMAGE_ALREADY_ATTACHED.
+         * @description Errors: 400 VALIDATION_FAILED, INVALID_IMAGE, UPLOAD_NOT_FOUND; 409 SLUG_TAKEN (`errors.slug`), IMAGE_NOT_READY, IMAGE_ALREADY_ATTACHED.
          */
         post: operations["CreateAdminCategory"];
         delete?: never;
@@ -284,13 +324,13 @@ export interface paths {
         get: operations["GetAdminCategory"];
         /**
          * Update a category. Empty slug keeps the current one; `imageKey` null removes the image.
-         * @description Errors: 400 VALIDATION_FAILED, INVALID_IMAGE, UPLOAD_NOT_FOUND; 404 NOT_FOUND; 409 SLUG_TAKEN, IMAGE_NOT_READY, IMAGE_ALREADY_ATTACHED.
+         * @description Errors: 400 VALIDATION_FAILED, INVALID_IMAGE, UPLOAD_NOT_FOUND; 404 NOT_FOUND; 409 SLUG_TAKEN (`errors.slug`), IMAGE_NOT_READY, IMAGE_ALREADY_ATTACHED.
          */
         put: operations["UpdateAdminCategory"];
         post?: never;
         /**
          * Archive a category. Refused while it has products that are not archived.
-         * @description Errors: 404 NOT_FOUND; 409 CATEGORY_HAS_PRODUCTS.
+         * @description The category image is removed with it: `image` is cleared in the same save and the image files are deleted afterwards. Errors: 404 NOT_FOUND; 409 CATEGORY_HAS_PRODUCTS.
          */
         delete: operations["ArchiveAdminCategory"];
         options?: never;
@@ -313,7 +353,7 @@ export interface paths {
         put?: never;
         /**
          * Create a product with at least one variant; each variant gets its stock record (and an InitialStock movement when above 0).
-         * @description Errors: 400 VALIDATION_FAILED (also unknown/archived categoryId); 409 SLUG_TAKEN, SKU_TAKEN.
+         * @description Errors: 400 VALIDATION_FAILED (also unknown/archived categoryId); 409 SLUG_TAKEN (`errors.slug`), SKU_TAKEN (`errors.sku` for the product SKU, otherwise one `errors["variants[i].sku"]` per taken variant SKU, i = index in the request).
          */
         post: operations["CreateAdminProduct"];
         delete?: never;
@@ -336,7 +376,7 @@ export interface paths {
         get: operations["GetAdminProduct"];
         /**
          * Update product values. Requires the `version` last read; a stale version gives 409 CONCURRENT_EDIT.
-         * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND; 409 CONCURRENT_EDIT, SLUG_TAKEN, SKU_TAKEN, NO_ACTIVE_VARIANT, PRODUCT_ARCHIVED.
+         * @description Replaces every value: all members of the body must be sent. Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND; 409 CONCURRENT_EDIT, SLUG_TAKEN (`errors.slug`), SKU_TAKEN (`errors.sku`), NO_ACTIVE_VARIANT, PRODUCT_ARCHIVED.
          */
         put: operations["UpdateAdminProduct"];
         post?: never;
@@ -377,7 +417,7 @@ export interface paths {
         put?: never;
         /**
          * Restore an archived product. Idempotent.
-         * @description Errors: 404 NOT_FOUND; 409 SLUG_TAKEN, SKU_TAKEN (reused meanwhile), CATEGORY_ARCHIVED.
+         * @description Errors: 404 NOT_FOUND; 409 SLUG_TAKEN (`errors.slug`), SKU_TAKEN (`errors.sku`) (reused meanwhile), CATEGORY_ARCHIVED.
          */
         post: operations["RestoreAdminProduct"];
         delete?: never;
@@ -397,7 +437,7 @@ export interface paths {
         put?: never;
         /**
          * Add a variant with its opening stock. Returns the whole product.
-         * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND; 409 SKU_TAKEN, PRODUCT_ARCHIVED, CONFLICT (50 variants).
+         * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND; 409 SKU_TAKEN (`errors.sku`), PRODUCT_ARCHIVED, CONFLICT (50 variants).
          */
         post: operations["AddAdminProductVariant"];
         delete?: never;
@@ -416,7 +456,7 @@ export interface paths {
         get?: never;
         /**
          * Update a variant (stock is changed through the inventory endpoints). Returns the whole product.
-         * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND; 409 SKU_TAKEN, LAST_ACTIVE_VARIANT, PRODUCT_ARCHIVED.
+         * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND; 409 SKU_TAKEN (`errors.sku`), LAST_ACTIVE_VARIANT, PRODUCT_ARCHIVED.
          */
         put: operations["UpdateAdminProductVariant"];
         post?: never;
@@ -503,7 +543,7 @@ export interface paths {
         };
         /**
          * Variants (of products that are not archived) with stock, threshold and status.
-         * @description Errors: 400 VALIDATION_FAILED.
+         * @description `status`: `ok`, `low`, `out`; several values comma-separated (`status=low,out`) and/or repeated (`status=low&status=out`) match any of them. `status=low,out` returns exactly the rows counted by `GET /admin/dashboard/low-stock` (link the dashboard card there). Errors: 400 VALIDATION_FAILED.
          */
         get: operations["ListInventory"];
         put?: never;
@@ -581,7 +621,7 @@ export interface components {
         AdjustStockRequest: {
             /** Format: int32 */
             quantityDelta: number;
-            reason: null | string;
+            reason: string;
         };
         AdminCategoryListResponse: {
             items: components["schemas"]["AdminCategoryResponse"][];
@@ -708,8 +748,90 @@ export interface components {
             traceId?: null | string;
         };
         AttachProductImageRequest: {
-            uploadKey: null | string;
-            altText: null | string;
+            uploadKey: string;
+            altText?: null | string;
+        };
+        /** @enum {unknown} */
+        CartAdjustmentReason: "unavailable" | "quantityReduced" | "priceChanged";
+        CartQuoteAdjustment: {
+            /** Format: uuid */
+            variantId: string;
+            reason: components["schemas"]["CartAdjustmentReason"];
+            /** Format: int32 */
+            requestedQuantity: number;
+            /** Format: int32 */
+            availableQuantity: number;
+            /** Format: double */
+            previousUnitPrice: null | number;
+            /** Format: double */
+            unitPrice: null | number;
+        };
+        CartQuoteItemRequest: {
+            /** Format: uuid */
+            variantId: string;
+            /** Format: int32 */
+            quantity: number;
+            /** Format: double */
+            knownUnitPrice?: null | number;
+        };
+        CartQuoteLine: {
+            /** Format: uuid */
+            variantId: string;
+            /** Format: uuid */
+            productId: string;
+            productName: string;
+            productSlug: string;
+            variantName: string;
+            sku: string;
+            /** Format: double */
+            unitAmount: number;
+            measurementUnit: components["schemas"]["MeasurementUnit"];
+            image: null | components["schemas"]["PublicImageResponse"];
+            /** Format: double */
+            unitPrice: number;
+            /** Format: double */
+            regularPrice: number;
+            /** Format: double */
+            discountPrice: null | number;
+            /** Format: int32 */
+            requestedQuantity: number;
+            /** Format: int32 */
+            quantity: number;
+            /** Format: double */
+            lineTotal: number;
+            /** Format: int32 */
+            maxOrderQuantity: number;
+        };
+        CartQuoteRequest: {
+            items: components["schemas"]["CartQuoteItemRequest"][];
+        };
+        CartQuoteResponse: {
+            lines: components["schemas"]["CartQuoteLine"][];
+            adjustments: components["schemas"]["CartQuoteAdjustment"][];
+            /** Format: double */
+            subtotal: number;
+            shipping: components["schemas"]["CartQuoteShipping"];
+            /** Format: double */
+            minOrderAmount: null | number;
+            meetsMinimumOrder: boolean;
+            /** Format: double */
+            amountUntilMinimumOrder: null | number;
+            /** Format: double */
+            total: number;
+            canCheckout: boolean;
+            currency: string;
+        };
+        CartQuoteShipping: {
+            enabled: boolean;
+            /** Format: double */
+            price: number;
+            /** Format: double */
+            basePrice: number;
+            /** Format: double */
+            freeShippingThreshold: null | number;
+            isFree: boolean;
+            /** Format: double */
+            amountUntilFreeShipping: null | number;
         };
         CategoryImageResponse: {
             key: string;
@@ -721,41 +843,41 @@ export interface components {
             height: number;
         };
         CreateProductRequest: {
-            variants?: null | components["schemas"]["CreateVariantRequest"][];
+            variants: components["schemas"]["CreateVariantRequest"][];
             /** Format: uuid */
-            categoryId?: null | string;
-            name?: null | string;
+            categoryId: string;
+            name: string;
             slug?: null | string;
             shortDescription?: null | string;
             description?: null | string;
-            sku?: null | string;
+            sku: string;
             isActive?: boolean;
             isFeatured?: boolean;
             seoTitle?: null | string;
             seoDescription?: null | string;
         };
         CreateUploadUrlRequest: {
-            fileName: null | string;
-            contentType: null | string;
+            fileName: string;
+            contentType: string;
             /** Format: int64 */
             size: number;
-            purpose: null | string;
+            purpose: string;
         };
         CreateVariantRequest: {
             /** Format: int32 */
-            initialStock?: number;
+            initialStock: number;
             /** Format: int32 */
-            lowStockThreshold?: number;
-            name?: null | string;
-            sku?: null | string;
+            lowStockThreshold: number;
+            name: string;
+            sku: string;
             /** Format: double */
-            unitAmount?: null | number;
-            measurementUnit?: null | components["schemas"]["MeasurementUnit"];
+            unitAmount: number;
+            measurementUnit: components["schemas"]["MeasurementUnit"];
             /** Format: double */
-            regularPrice?: null | number;
+            regularPrice: number;
             /** Format: double */
-            discountPrice?: null | number;
-            isActive?: boolean;
+            discountPrice: null | number;
+            isActive: boolean;
             /** Format: int32 */
             sortOrder?: null | number;
         };
@@ -1018,27 +1140,32 @@ export interface components {
             maxOrderQuantity: number;
         };
         ReorderCategoriesRequest: {
-            ids: null | string[];
+            ids: string[];
         };
         ReorderProductImagesRequest: {
-            imageIds: null | string[];
+            imageIds: string[];
             /** Format: uuid */
             mainImageId: null | string;
         };
         SaveCategoryRequest: {
-            name: null | string;
+            name: string;
             slug: null | string;
             description: null | string;
             imageKey: null | string;
-            /**
-             * Format: int32
-             * @default 0
-             */
+            /** Format: int32 */
             sortOrder: number;
-            /** @default true */
             isActive: boolean;
-            seoTitle?: null | string;
-            seoDescription?: null | string;
+            seoTitle: null | string;
+            seoDescription: null | string;
+        };
+        SeoRoute: {
+            slug: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        SeoRoutesResponse: {
+            categories: components["schemas"]["SeoRoute"][];
+            products: components["schemas"]["SeoRoute"][];
         };
         SetLowStockThresholdRequest: {
             /** Format: int32 */
@@ -1051,18 +1178,18 @@ export interface components {
         };
         UpdateProductRequest: {
             /** Format: uint32 */
-            version?: null | number;
+            version: number;
+            slug: null | string;
+            shortDescription: null | string;
+            description: null | string;
+            isActive: boolean;
+            isFeatured: boolean;
+            seoTitle: null | string;
+            seoDescription: null | string;
             /** Format: uuid */
-            categoryId?: null | string;
-            name?: null | string;
-            slug?: null | string;
-            shortDescription?: null | string;
-            description?: null | string;
-            sku?: null | string;
-            isActive?: boolean;
-            isFeatured?: boolean;
-            seoTitle?: null | string;
-            seoDescription?: null | string;
+            categoryId: string;
+            name: string;
+            sku: string;
         };
         UploadUrlResponse: {
             uploadUrl: string;
@@ -1076,16 +1203,16 @@ export interface components {
             maxSize: number;
         };
         VariantRequest: {
-            name?: null | string;
-            sku?: null | string;
+            name: string;
+            sku: string;
             /** Format: double */
-            unitAmount?: null | number;
-            measurementUnit?: null | components["schemas"]["MeasurementUnit"];
+            unitAmount: number;
+            measurementUnit: components["schemas"]["MeasurementUnit"];
             /** Format: double */
-            regularPrice?: null | number;
+            regularPrice: number;
             /** Format: double */
-            discountPrice?: null | number;
-            isActive?: boolean;
+            discountPrice: null | number;
+            isActive: boolean;
             /** Format: int32 */
             sortOrder?: null | number;
         };
@@ -1163,6 +1290,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicStoreResponse"];
+                };
+            };
+        };
+    };
+    GetSeoRoutes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoRoutesResponse"];
                 };
             };
         };
@@ -1348,6 +1495,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicAvailabilityResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    QuoteCart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CartQuoteRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CartQuoteResponse"];
                 };
             };
             /** @description Bad Request */
@@ -2645,7 +2825,7 @@ export interface operations {
         parameters: {
             query?: {
                 q?: string;
-                status?: string;
+                status?: string[];
                 sort?: string;
                 page?: number;
                 pageSize?: number;

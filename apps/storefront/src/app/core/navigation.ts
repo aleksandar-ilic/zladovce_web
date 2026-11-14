@@ -6,12 +6,17 @@ export interface NavItem {
   exact?: boolean;
 }
 
+export const SHOP_PATH = '/prodavnica';
+
 /**
- * Main navigation, used by the header and the mobile drawer.
- * Later phases add entries here as the pages are built, e.g.
- *   { label: 'Prodavnica', path: '/prodavnica' }
+ * Main navigation, used by the header and the mobile drawer. "Prodavnica" also opens the
+ * category menu (real categories from the API). About, blog and contact are added in the
+ * phases that build those pages.
  */
-export const MAIN_NAV: readonly NavItem[] = [{ label: 'Početna', path: '/', exact: true }];
+export const MAIN_NAV: readonly NavItem[] = [
+  { label: 'Početna', path: '/', exact: true },
+  { label: 'Prodavnica', path: SHOP_PATH },
+];
 
 /** Footer links. Legal and informational pages are added here when they exist. */
 export const FOOTER_NAV: readonly NavItem[] = [...MAIN_NAV, { label: 'Korpa', path: '/korpa' }];

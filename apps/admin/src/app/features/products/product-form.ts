@@ -294,14 +294,18 @@ function productFields(form: ProductForm, options: ProductRequestOptions) {
   };
 }
 
+/**
+ * Every member the API requires (`discountPrice` and `isActive` included – a missing member is a
+ * 400, never a default). Only called for a valid row, so the required numbers are set.
+ */
 export function variantRequest(row: VariantForm, sortOrder: number): VariantRequest {
   const v = row.getRawValue();
   return {
     name: v.name.trim(),
     sku: v.sku.trim(),
-    unitAmount: v.unitAmount,
+    unitAmount: v.unitAmount ?? 0,
     measurementUnit: v.measurementUnit,
-    regularPrice: v.regularPrice,
+    regularPrice: v.regularPrice ?? 0,
     discountPrice: v.discountPrice ?? null,
     isActive: v.isActive,
     sortOrder,

@@ -1,7 +1,13 @@
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormControl, FormGroup } from '@angular/forms';
-import { CART_MAX_LINE_QUANTITY, CART_STORAGE_KEY, CartStore } from './cart-store';
+import {
+  CART_LEGACY_STORAGE_KEY,
+  CART_MAX_LINE_QUANTITY,
+  CART_MAX_LINES,
+  CART_STORAGE_KEY,
+  CartStore,
+} from './cart-store';
 import {
   ADMIN_PRODUCT_SORTS,
   formatUnitAmount,
@@ -46,7 +52,7 @@ describe('CartStore', () => {
   });
 
   it('uses a versioned storage key', () => {
-    expect(CART_STORAGE_KEY).toBe('zladovce.cart.v1');
+    expect(CART_STORAGE_KEY).toBe('zladovce.cart.v2');
   });
 
   it('adds lines and persists only variant id and quantity', () => {
@@ -61,7 +67,7 @@ describe('CartStore', () => {
     expect(cart.lineCount()).toBe(2);
     expect(cart.isEmpty()).toBe(false);
     expect(stored()).toEqual({
-      version: 1,
+      version: 2,
       lines: [
         { variantId: 'v1', quantity: 1 },
         { variantId: 'v2', quantity: 3 },
@@ -140,14 +146,14 @@ describe('CartStore', () => {
   });
 
   it('restores the cart from storage', () => {
-    seed({ version: 1, lines: [{ variantId: 'v1', quantity: 2 }] });
+    seed({ version: 2, lines: [{ variantId: 'v1', quantity: 2 }] });
     const cart = createStore();
     expect(cart.lines()).toEqual([{ variantId: 'v1', quantity: 2 }]);
   });
 
   it('sanitises stored data: drops malformed lines, merges duplicates, caps quantities', () => {
     seed({
-      version: 1,
+      version: 2,
       lines: [
         { variantId: 'v1', quantity: 2 },
         { variantId: 'v1', quantity: 3 },
@@ -167,10 +173,10 @@ describe('CartStore', () => {
   });
 
   it.each([
-    ['another version', JSON.stringify({ version: 2, lines: [{ variantId: 'v1', quantity: 1 }] })],
+    ['another version', JSON.stringify({ version: 3, lines: [{ variantId: 'v1', quantity: 1 }] })],
     ['invalid JSON', '{not json'],
     ['a non-object', '"text"'],
-    ['lines that are not an array', JSON.stringify({ version: 1, lines: 'x' })],
+    ['lines that are not an array', JSON.stringify({ version: 2, lines: 'x' })],
   ])('ignores %s in storage', (_name, raw) => {
     localStorage.setItem(CART_STORAGE_KEY, raw);
     expect(createStore().isEmpty()).toBe(true);
@@ -179,7 +185,7 @@ describe('CartStore', () => {
   it('follows changes made in another tab', () => {
     const cart = createStore();
     cart.add('v1');
-    fromOtherTab({ version: 1, lines: [{ variantId: 'v9', quantity: 4 }] });
+    fromOtherTab({ version: 2, lines: [{ variantId: 'v9', quantity: 4 }] });
     expect(cart.lines()).toEqual([{ variantId: 'v9', quantity: 4 }]);
     expect(cart.totalQuantity()).toBe(4);
   });
@@ -208,7 +214,7 @@ describe('CartStore', () => {
     const cart = createStore();
     cart.add('v1');
     TestBed.resetTestingModule();
-    fromOtherTab({ version: 1, lines: [{ variantId: 'v9', quantity: 4 }] });
+    fromOtherTab({ version: 2, lines: [{ variantId: 'v9', quantity: 4 }] });
     expect(cart.lines()).toEqual([{ variantId: 'v1', quantity: 1 }]);
   });
 
@@ -225,13 +231,115 @@ describe('CartStore', () => {
     }
   });
 
+  it('migrates a Phase 2 cart (v1) once and removes the old key', () => {
+    localStorage.setItem(
+      CART_LEGACY_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        lines: [
+          { variantId: 'v1', quantity: 2 },
+          { variantId: 'v1', quantity: 1 },
+          { variantId: 'v2', quantity: 0 },
+        ],
+      }),
+    );
+    const cart = createStore();
+    expect(cart.lines()).toEqual([{ variantId: 'v1', quantity: 3 }]);
+    expect(stored()).toEqual({ version: 2, lines: [{ variantId: 'v1', quantity: 3 }] });
+    expect(localStorage.getItem(CART_LEGACY_STORAGE_KEY)).toBeNull();
+  });
+
+  it('prefers an existing v2 cart over a leftover v1 cart', () => {
+    seed({ version: 2, lines: [{ variantId: 'v2', quantity: 1 }] });
+    localStorage.setItem(
+      CART_LEGACY_STORAGE_KEY,
+      JSON.stringify({ version: 1, lines: [{ variantId: 'v1', quantity: 5 }] }),
+    );
+    expect(createStore().lines()).toEqual([{ variantId: 'v2', quantity: 1 }]);
+  });
+
+  it('keeps the known unit price and label of a line, and validates them', () => {
+    const cart = createStore();
+    cart.add('v1', 1, { knownUnitPrice: 590, label: '  Džem od šljiva, 370 g ' });
+    cart.add('v1', 1, { knownUnitPrice: -5 });
+    cart.add('v2', 1, { knownUnitPrice: Number.NaN, label: '' });
+    expect(cart.lines()).toEqual([
+      { variantId: 'v1', quantity: 2, knownUnitPrice: 590, label: 'Džem od šljiva, 370 g' },
+      { variantId: 'v2', quantity: 1 },
+    ]);
+    cart.setQuantity('v1', 4);
+    expect(cart.lines()[0]).toEqual({
+      variantId: 'v1',
+      quantity: 4,
+      knownUnitPrice: 590,
+      label: 'Džem od šljiva, 370 g',
+    });
+    expect(stored()).toEqual({ version: 2, lines: cart.lines() });
+  });
+
+  it('never adds above the variant maximum and reports what was added', () => {
+    const cart = createStore();
+    expect(cart.add('v1', 3, { maxQuantity: 5 })).toEqual({ added: 3 });
+    expect(cart.add('v1', 3, { maxQuantity: 5 })).toEqual({ added: 2, limitedBy: 'quantity' });
+    expect(cart.add('v1', 1, { maxQuantity: 5 })).toEqual({ added: 0, limitedBy: 'quantity' });
+    expect(cart.quantityOf('v1')).toBe(5);
+    expect(cart.add('v2', 120)).toEqual({ added: CART_MAX_LINE_QUANTITY, limitedBy: 'quantity' });
+    expect(cart.add('', 1)).toEqual({ added: 0 });
+  });
+
+  it('holds at most 50 lines', () => {
+    const cart = createStore();
+    for (let i = 0; i < CART_MAX_LINES; i++) {
+      cart.add(`v${i}`);
+    }
+    expect(cart.isFull()).toBe(true);
+    expect(cart.add('extra')).toEqual({ added: 0, limitedBy: 'lines' });
+    cart.setQuantity('extra', 2);
+    expect(cart.lineCount()).toBe(CART_MAX_LINES);
+    // An existing line can still change.
+    expect(cart.add('v0', 2)).toEqual({ added: 2 });
+    seed({
+      version: 2,
+      lines: Array.from({ length: 60 }, (_, i) => ({ variantId: `s${i}`, quantity: 1 })),
+    });
+    window.dispatchEvent(new StorageEvent('storage', { key: CART_STORAGE_KEY }));
+    expect(cart.lineCount()).toBe(CART_MAX_LINES);
+  });
+
+  it('replaces all lines from a quote and writes only when something changed', () => {
+    const cart = createStore();
+    cart.add('v1', 5);
+    cart.add('v2', 1);
+    const spy = vi.spyOn(Storage.prototype, 'setItem');
+    try {
+      cart.replaceAll([{ variantId: 'v1', quantity: 3, knownUnitPrice: 600 }]);
+      expect(cart.lines()).toEqual([{ variantId: 'v1', quantity: 3, knownUnitPrice: 600 }]);
+      expect(spy).toHaveBeenCalledTimes(1);
+      cart.replaceAll([{ variantId: 'v1', quantity: 3, knownUnitPrice: 600 }]);
+      expect(spy).toHaveBeenCalledTimes(1);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('follows another tab, including prices and labels', () => {
+    const cart = createStore();
+    fromOtherTab({
+      version: 2,
+      lines: [{ variantId: 'v9', quantity: 2, knownUnitPrice: 450.5, label: 'Sok, 1 l' }],
+    });
+    expect(cart.lines()).toEqual([
+      { variantId: 'v9', quantity: 2, knownUnitPrice: 450.5, label: 'Sok, 1 l' },
+    ]);
+  });
+
   it('is empty and never touches storage on the server', () => {
-    seed({ version: 1, lines: [{ variantId: 'v1', quantity: 2 }] });
+    seed({ version: 2, lines: [{ variantId: 'v1', quantity: 2 }] });
     const cart = createStore('server');
     expect(cart.isEmpty()).toBe(true);
     cart.add('v2', 1);
     expect(cart.totalQuantity()).toBe(1);
-    expect(stored()).toEqual({ version: 1, lines: [{ variantId: 'v1', quantity: 2 }] });
+    expect(stored()).toEqual({ version: 2, lines: [{ variantId: 'v1', quantity: 2 }] });
   });
 });
 

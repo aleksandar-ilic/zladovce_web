@@ -12,7 +12,8 @@ import { Observable } from 'rxjs';
 
 export interface InventoryQuery {
   q?: string;
-  status?: StockStatus;
+  /** One status or several, comma-separated (`low,out`). */
+  status?: StockStatus | `${StockStatus},${StockStatus}`;
   sort?: InventorySort;
   page?: number;
   pageSize?: number;

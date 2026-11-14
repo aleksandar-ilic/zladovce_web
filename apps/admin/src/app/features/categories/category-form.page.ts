@@ -403,12 +403,11 @@ export class CategoryFormPage implements OnInit, HasUnsavedChanges {
       error: (error: unknown) => {
         this.saving.set(false);
         const apiError = asApiError(error);
-        const unmatched = applyServerErrors(this.form, apiError);
+        // 409 SLUG_TAKEN carries `errors.slug`, applied like a validation error.
         if (apiError.code === 'SLUG_TAKEN') {
           this.editSlug.set(true);
-          this.form.controls.slug.setErrors({ server: apiError.detail });
-          this.form.controls.slug.markAsTouched();
         }
+        const unmatched = applyServerErrors(this.form, apiError);
         if (
           [
             'INVALID_IMAGE',

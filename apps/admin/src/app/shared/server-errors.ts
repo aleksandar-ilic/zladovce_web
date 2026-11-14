@@ -35,6 +35,9 @@ export interface ServerErrorOptions {
  * `{ server: message }` (validationMessage shows the string) and marks it touched, so it shows
  * immediately under the field. The error disappears when the value changes.
  *
+ * Also used for `409 SLUG_TAKEN` / `SKU_TAKEN`, which carry the same map (`slug`, `sku`,
+ * `variants[i].sku`).
+ *
  * Returns the messages that matched no control; show them in a general alert.
  */
 export function applyServerErrors(
@@ -55,24 +58,4 @@ export function applyServerErrors(
     }
   }
   return unmatched;
-}
-
-/**
- * For conflicts that name a value (409 SKU_TAKEN: „Šifra (SKU) „X“ se već koristi…“), puts the
- * message on the control(s) holding that value. Returns true when at least one control matched.
- */
-export function markConflictingValue(
-  controls: readonly AbstractControl[],
-  detail: string,
-): boolean {
-  let matched = false;
-  for (const control of controls) {
-    const value: unknown = control.value;
-    if (typeof value === 'string' && value.trim() !== '' && detail.includes(`„${value.trim()}“`)) {
-      control.setErrors({ ...(control.errors ?? {}), server: detail });
-      control.markAsTouched();
-      matched = true;
-    }
-  }
-  return matched;
 }

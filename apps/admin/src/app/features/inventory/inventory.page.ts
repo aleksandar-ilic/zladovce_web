@@ -103,6 +103,7 @@ const DIALOG = {
           <mat-option value="ok">{{ stockLabels.ok }}</mat-option>
           <mat-option value="low">{{ stockLabels.low }}</mat-option>
           <mat-option value="out">{{ stockLabels.out }}</mat-option>
+          <mat-option value="low,out">Malo ili nema</mat-option>
         </mat-select>
       </mat-form-field>
       <mat-form-field appearance="outline">

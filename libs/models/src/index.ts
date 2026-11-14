@@ -102,3 +102,35 @@ export interface ImageRenditions {
   baseUrl: string;
   widths: number[];
 }
+
+// ---------------------------------------------------------------------------------------------
+// Phase 4 – public catalog, store settings, cart quote and SEO routes (generated).
+// ---------------------------------------------------------------------------------------------
+export type PublicImage = Schemas['PublicImageResponse'];
+export type PublicCategory = Schemas['PublicCategoryResponse'];
+export type PublicCategoryDetail = Schemas['PublicCategoryDetailResponse'];
+export type PublicCategoryList = Schemas['PublicCategoryListResponse'];
+export type PublicProductListItem = Schemas['PublicProductListItem'];
+export type PublicProduct = Schemas['PublicProductResponse'];
+export type PublicProductList = Schemas['PublicProductListResponse'];
+export type PublicVariant = Schemas['PublicVariantResponse'];
+export type PublicSeo = Schemas['PublicSeo'];
+export type PublicAvailabilityItem = Schemas['PublicAvailabilityItem'];
+export type PublicAvailability = Schemas['PublicAvailabilityResponse'];
+
+export type PublicStore = Schemas['PublicStoreResponse'];
+export type PublicStoreShipping = Schemas['PublicStoreShipping'];
+
+export type CartQuoteItem = Schemas['CartQuoteItemRequest'];
+export type CartQuoteRequest = Schemas['CartQuoteRequest'];
+export type CartQuote = Schemas['CartQuoteResponse'];
+export type CartQuoteLine = Schemas['CartQuoteLine'];
+export type CartQuoteAdjustment = Schemas['CartQuoteAdjustment'];
+export type CartAdjustmentReason = Schemas['CartAdjustmentReason'];
+export type CartQuoteShipping = Schemas['CartQuoteShipping'];
+
+export type SeoRoute = Schemas['SeoRoute'];
+export type SeoRoutes = Schemas['SeoRoutesResponse'];
+
+/** Sort values of `GET /catalog/products`. `bestselling` is ordered like `newest` until Phase 5. */
+export type PublicProductSort = 'newest' | 'priceAsc' | 'priceDesc' | 'name' | 'bestselling';

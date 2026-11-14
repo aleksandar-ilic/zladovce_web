@@ -1,13 +1,14 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { CartToast } from './core/layout/cart-toast';
 import { Footer } from './core/layout/footer';
 import { Header } from './core/layout/header';
 import { SeoService } from './core/seo';
 
-/** Application shell: skip link, header, main landmark with the routed page, footer. */
+/** Application shell: skip link, header, main landmark with the routed page, footer, cart toast. */
 @Component({
   selector: 'sf-root',
-  imports: [RouterOutlet, Header, Footer],
+  imports: [RouterOutlet, Header, Footer, CartToast],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'flex min-h-dvh flex-col' },
   template: `
@@ -19,6 +20,7 @@ import { SeoService } from './core/seo';
       <router-outlet />
     </main>
     <sf-footer />
+    <sf-cart-toast />
   `,
 })
 export class App {

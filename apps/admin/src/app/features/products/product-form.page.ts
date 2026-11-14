@@ -41,7 +41,7 @@ import { ProductsApi } from '../../data/products-api';
 import { ConfirmService } from '../../shared/confirm-dialog';
 import { SLUG_MESSAGES } from '../../shared/patterns';
 import { RichTextEditor } from '../../shared/rich-text-editor';
-import { applyServerErrors, markConflictingValue } from '../../shared/server-errors';
+import { applyServerErrors } from '../../shared/server-errors';
 import { HasUnsavedChanges, warnBeforeUnload } from '../../shared/unsaved-changes';
 import {
   createProductRequest,
@@ -523,16 +523,13 @@ export class ProductFormPage implements OnInit, HasUnsavedChanges {
       this.formError.set(null);
       return;
     }
-    const unmatched = applyServerErrors(target, error);
-    if (error.code === 'SKU_TAKEN') {
-      const skuControls = [this.form.controls.sku, ...this.variants.map((row) => row.controls.sku)];
-      markConflictingValue(skuControls, error.detail);
-    }
+    // 409 SLUG_TAKEN / SKU_TAKEN carry an `errors` map like a validation error: `slug`, `sku`
+    // (product base SKU, or the SKU of the variant in `target`) and `variants[i].sku` (index in
+    // the create request, which is the form order).
     if (error.code === 'SLUG_TAKEN') {
       this.editSlug.set(true);
-      this.form.controls.slug.setErrors({ server: error.detail });
-      this.form.controls.slug.markAsTouched();
     }
+    const unmatched = applyServerErrors(target, error);
     const where =
       target === this.form ? '' : ` (pakovanje „${(target as VariantForm).controls.name.value}“)`;
     this.formError.set(

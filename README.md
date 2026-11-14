@@ -20,7 +20,7 @@ npm ci
 | `npm run start:storefront` | Storefront dev server on http://localhost:4200 |
 | `npm run start:admin` | Admin dev server on http://localhost:4201 |
 | `npm run build` | Production build of both apps into `dist/` |
-| `npm run build:storefront` | Storefront only: static, prerendered output in `dist/storefront/browser` |
+| `npm run build:storefront` | Storefront only: static, prerendered output in `dist/storefront/browser`, then `sitemap.xml` and `robots.txt` (`tools/generate-seo-files.mjs`) |
 | `npm run build:admin` | Admin only: SPA in `dist/admin/browser` |
 | `npm run lint` | ESLint (TypeScript, Angular templates, accessibility, import boundaries) |
 | `npm run test:ci` | All unit tests, headless, single run (libs, storefront, admin) |
@@ -39,13 +39,15 @@ frontend/
 ├── tsconfig.base.json        compiler options and the @zladovce/* path aliases
 ├── eslint.config.mjs         lint rules and import boundaries
 ├── .postcssrc.json           Tailwind CSS v4 (PostCSS plugin)
-├── tools/generate-models.mjs
+├── tools/                  generate-models.mjs, generate-seo-files.mjs + seo-files.mjs (sitemap/robots)
 ├── apps/
 │   ├── storefront/           public shop – prerendered, Tailwind
 │   │   ├── config/{development,production}/config.json   runtime configuration
 │   │   └── src/app/
-│   │       ├── core/         navigation config, header, footer, SEO service
-│   │       ├── features/     home, cart, not-found (one lazy route each)
+│   │       ├── core/         navigation, header, footer, cart toast, SEO service + JSON-LD,
+│   │       │                 prerender routes, data clients, CartQuoteService
+│   │       ├── shared/       product card/image, price, availability, quantity stepper, breadcrumbs
+│   │       ├── features/     home, shop (shop + category), product, cart, not-found
 │   │       ├── app.routes.ts
 │   │       └── app.routes.server.ts   render mode per route
 │   └── admin/                admin SPA – Angular Material + Tailwind utilities
@@ -183,6 +185,44 @@ and named aliases of the generated contract (`AdminProduct`, `AdminCategory`, `I
 the backend OpenAPI document and fails with a clear message when that document is missing.
 It is run by hand after the contract changes and is not part of the build.
 
+## Storefront (Phase 4)
+
+| Page | Route | Rendering |
+|---|---|---|
+| Početna | `/` | Prerendered. Hero, featured categories and products (`featured=true`), family story, "Zašto naši proizvodi", "Kako poručiti", delivery facts from `GET /store` (only configured values). "Najprodavanije" is left out until real sales data exists (Phase 5). |
+| Prodavnica | `/prodavnica` | Prerendered. Search, category, price range, "na stanju", sort and paging all live in the URL query (`q`, `minPrice`, `maxPrice`, `inStock=true`, `sort`, `page`); small screens get a filter drawer. |
+| Kategorija | `/prodavnica/:categorySlug` | Prerendered for every slug of `GET /seo/routes`; same grid with the category header. |
+| Proizvod | `/proizvod/:slug` | Prerendered for every slug; gallery, packages, price/discount, availability, quantity, "Dodaj u korpu", related products. |
+| Korpa | `/korpa` | Client only, `noindex`. |
+
+- **Fresh price and stock.** Prerendered pages show the build-time data first; after hydration the browser
+  refreshes product pages through `GET /catalog/availability` and reloads lists without the transfer cache.
+- **Cart.** `CartStore` (`@zladovce/shared`) keeps `{ variantId, quantity, knownUnitPrice?, label? }` in
+  `localStorage` key `zladovce.cart.v2` (a Phase 2 `…cart.v1` cart is migrated once), 1–99 per line, at most 50 lines,
+  synchronised between tabs. `CartQuoteService` prices it with `POST /cart/quote` (debounced, the newer request
+  cancels the older, answers for a changed cart are discarded), overwrites the cart from the quote lines and turns
+  adjustments into Serbian notices. The product page never lets a line exceed `maxOrderQuantity`.
+- **Checkout** is Phase 5: "Nastavi na poručivanje" is shown disabled with the note "Poručivanje će uskoro biti dostupno."
+- **SEO.** `SeoService` sets title, description, robots, canonical, Open Graph and JSON-LD (`Product` with one RSD
+  offer per package, `BreadcrumbList`) per page.
+
+### Build and deployment
+
+```bash
+ZLADOVCE_API_BASE_URL=https://api.example.com/api/v1 ZLADOVCE_SITE_URL=https://zladovce.com npm run build:storefront
+```
+
+| Variable | Used for | Default |
+|---|---|---|
+| `ZLADOVCE_API_BASE_URL` | Prerender: `GET /seo/routes` (which categories/products to render) and the page data; `lastmod` of the sitemap | `http://localhost:5080/api/v1` |
+| `ZLADOVCE_SITE_URL` | Canonical, Open Graph and JSON-LD URLs in the prerendered HTML; `sitemap.xml` and `robots.txt` | `http://localhost:4200` |
+
+- When the API cannot be reached (or has no products) the build logs a warning and still succeeds with the static
+  pages only; the sitemap then lists only what was prerendered.
+- The host serves `dist/storefront/browser` and must rewrite unknown paths (a product or category created after the
+  build, `/korpa`) to `/index.csr.html` with status 200; the browser renders them.
+- Rebuild after catalog changes (the Phase 8 build webhook); price and stock are always fetched live anyway.
+
 ## Admin catalog (Phase 3)
 
 | Page | Route | Notes |
@@ -191,7 +231,7 @@ It is run by hand after the contract changes and is not part of the build.
 | Novi proizvod, Izmena proizvoda | `/proizvodi/novi`, `/proizvodi/:id` | One form; see below. |
 | Kategorije | `/kategorije`, `/kategorije/nova`, `/kategorije/:id` | Order by drag and drop or arrows (saved at once), one image, SEO under "Napredno / SEO". |
 | Zalihe | `/zalihe` | "Promeni stanje" (+/−, mandatory reason, resulting stock shown first), low-stock threshold, movement history. |
-| Kontrolna tabla | `/` | "Malo na stanju" card linking to the filtered inventory. |
+| Kontrolna tabla | `/` | "Malo na stanju" card linking to the inventory filtered by `status=low,out` ("Malo ili nema"). |
 
 - **Product saving.** A new product is created with all its packages (variants), opening stock and
   thresholds in one request; the page then switches to editing so photos can be added. On an existing
@@ -212,5 +252,9 @@ It is run by hand after the contract changes and is not part of the build.
   `sanitizeRichText`, which keeps only what the API keeps (p, br, strong, em, u, s, ul, ol, li, h2–h4,
   blockquote, a[href,title], hr).
 - **Server validation errors** (`shared/server-errors.ts`). `errors` keys such as
-  `variants[0].discountPrice` are put on the matching (nested) form control and shown under the field.
+  `variants[0].discountPrice` are put on the matching (nested) form control and shown under the field. The same
+  applies to `409 SLUG_TAKEN` / `SKU_TAKEN` (`slug`, `sku`, `variants[i].sku`).
+- **Every required member is sent** (the API rejects missing members): product PUT sends all fields with `null` for
+  empty optional ones, variants always send `discountPrice` and `isActive`, categories always send all eight members
+  (the current `image.key` keeps the image).
 - Leaving a form with unsaved changes asks first (route guard and `beforeunload`).

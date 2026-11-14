@@ -8,3 +8,94 @@
 
 @source './';
 @source '../../../libs';
+
+@layer components {
+  /* Product descriptions: the API keeps only p, br, strong, em, u, s, ul, ol, li, h2–h4,
+     blockquote, a and hr, so only those are styled. */
+  .rich-text {
+    color: var(--color-ink-700);
+    font-size: var(--text-lg);
+    line-height: var(--text-lg--line-height);
+  }
+
+  .rich-text > * + * {
+    margin-top: 1rem;
+  }
+
+  .rich-text h2,
+  .rich-text h3,
+  .rich-text h4 {
+    margin-top: 2rem;
+    font-family: var(--font-serif);
+    font-weight: 600;
+    color: var(--color-olive-900);
+  }
+
+  .rich-text h2 {
+    font-size: var(--text-2xl);
+    line-height: var(--text-2xl--line-height);
+  }
+
+  .rich-text h3 {
+    font-size: var(--text-xl);
+    line-height: var(--text-xl--line-height);
+  }
+
+  .rich-text h4 {
+    font-size: var(--text-lg);
+  }
+
+  .rich-text ul {
+    list-style: disc;
+    padding-left: 1.5rem;
+  }
+
+  .rich-text ol {
+    list-style: decimal;
+    padding-left: 1.5rem;
+  }
+
+  .rich-text li + li {
+    margin-top: 0.375rem;
+  }
+
+  .rich-text strong {
+    color: var(--color-ink-900);
+    font-weight: 600;
+  }
+
+  .rich-text a {
+    color: var(--color-olive-800);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  .rich-text blockquote {
+    border-left: 3px solid var(--color-sage-300);
+    padding-left: 1.25rem;
+    font-family: var(--font-serif);
+    font-size: var(--text-xl);
+    color: var(--color-olive-800);
+  }
+
+  .rich-text hr {
+    border-color: var(--color-cream-200);
+  }
+
+  /* Subtle entrance motion only (disabled by prefers-reduced-motion in base.css). */
+  .sf-toast {
+    animation: sf-rise 240ms var(--ease-gentle) both;
+  }
+
+  @keyframes sf-rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

@@ -10,6 +10,11 @@ export interface ApiRequestOptions {
   /** Query parameters; null, undefined and empty-string values are omitted. */
   params?: QueryParams;
   headers?: Record<string, string>;
+  /**
+   * Set to false to skip the SSR/prerender transfer cache, e.g. to refresh price and stock in
+   * the browser after a prerendered page has hydrated. Default: Angular's behaviour.
+   */
+  transferCache?: boolean;
 }
 
 /** Builds HttpParams, skipping empty values so optional filters never reach the URL as `x=`. */
@@ -66,6 +71,10 @@ export class ApiClient {
   }
 
   private httpOptions(options: ApiRequestOptions) {
-    return { params: toHttpParams(options.params), headers: options.headers };
+    return {
+      params: toHttpParams(options.params),
+      headers: options.headers,
+      ...(options.transferCache === undefined ? {} : { transferCache: options.transferCache }),
+    };
   }
 }

@@ -76,16 +76,10 @@ type State =
             <div class="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold">
               <a
                 routerLink="/zalihe"
-                [queryParams]="{ status: 'low' }"
+                [queryParams]="{ status: 'low,out' }"
                 class="text-olive-700 underline underline-offset-4"
                 data-testid="low-stock-link"
-                >Zalihe: malo na stanju</a
-              >
-              <a
-                routerLink="/zalihe"
-                [queryParams]="{ status: 'out' }"
-                class="text-olive-700 underline underline-offset-4"
-                >Zalihe: nema na stanju</a
+                >Zalihe: malo ili nema na stanju</a
               >
             </div>
           }

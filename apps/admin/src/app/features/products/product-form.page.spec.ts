@@ -146,15 +146,13 @@ describe('ProductFormPage – new product', () => {
     load(controller, null);
     await settle(harness);
     page.form.patchValue({ name: 'Sok od jabuke', sku: 'SOK' });
-    page.form.controls.variants
-      .at(0)
-      .patchValue({
-        unitAmount: 1,
-        measurementUnit: 'l',
-        regularPrice: 400,
-        sku: 'SOK-1L',
-        name: '1 l',
-      });
+    page.form.controls.variants.at(0).patchValue({
+      unitAmount: 1,
+      measurementUnit: 'l',
+      regularPrice: 400,
+      sku: 'SOK-1L',
+      name: '1 l',
+    });
     submit(root);
     await settle(harness);
     expectRequest(controller, 'POST', '/admin/products').flush(
@@ -177,6 +175,46 @@ describe('ProductFormPage – new product', () => {
       'Proverite označena polja.',
     );
     expect(TestBed.inject(Router).url).toBe('/proizvodi/novi');
+  });
+
+  it('puts 409 SKU_TAKEN on the package named by errors[variants[i].sku]', async () => {
+    const { harness, controller, page, root } = await open('/proizvodi/novi');
+    load(controller, null);
+    await settle(harness);
+    page.form.patchValue({ categoryId: CATEGORY.id, name: 'Sok od jabuke', sku: 'SOK' });
+    page.form.controls.variants.at(0).patchValue({
+      unitAmount: 1,
+      measurementUnit: 'l',
+      regularPrice: 400,
+      sku: 'SOK-1L',
+      name: '1 l',
+    });
+    submit(root);
+    await settle(harness);
+    const request = expectRequest(controller, 'POST', '/admin/products');
+    const body = request.request.body as { variants: Record<string, unknown>[] };
+    // Every required member is sent, nullable ones as null.
+    expect(Object.keys(body.variants[0]!)).toEqual(
+      expect.arrayContaining(['discountPrice', 'isActive', 'initialStock', 'lowStockThreshold']),
+    );
+    expect(body.variants[0]!['discountPrice']).toBeNull();
+    request.flush(
+      {
+        title: 'Šifra je zauzeta',
+        status: 409,
+        code: 'SKU_TAKEN',
+        detail: 'Šifra (SKU) „SOK-1L“ se već koristi.',
+        errors: { 'variants[0].sku': ['Šifra (SKU) „SOK-1L“ se već koristi.'] },
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
+    await settle(harness);
+    const rowErrors = [...root.querySelectorAll('[data-testid="variant-row"] mat-error')].map(text);
+    expect(rowErrors).toEqual(['Šifra (SKU) „SOK-1L“ se već koristi.']);
+    expect(page.form.controls.sku.errors).toBeNull();
+    expect(text(root.querySelector('[data-testid="form-error"]'))).toBe(
+      'Proverite označena polja.',
+    );
   });
 
   it('does not send an invalid form', async () => {
@@ -382,6 +420,7 @@ describe('ProductFormPage – editing and version handling', () => {
         status: 409,
         code: 'SKU_TAKEN',
         detail: 'Šifra (SKU) „DZEM-ZAUZETO“ se već koristi. Izaberite drugu.',
+        errors: { sku: ['Šifra (SKU) „DZEM-ZAUZETO“ se već koristi. Izaberite drugu.'] },
       },
       { status: 409, statusText: 'Conflict' },
     );
