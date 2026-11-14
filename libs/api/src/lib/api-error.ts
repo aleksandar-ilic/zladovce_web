@@ -21,6 +21,10 @@ export interface ApiErrorInit {
   traceId?: string;
   correlationId?: string;
   type?: string;
+  /** Every member of the problem body, including extensions such as `quote` or `allowedNextStatuses`. */
+  body?: Record<string, unknown>;
+  /** Seconds from the `Retry-After` header (429), when present and readable. */
+  retryAfterSeconds?: number;
 }
 
 /**
@@ -38,6 +42,10 @@ export class ApiError extends Error {
   /** Value of the `X-Correlation-Id` header sent with the failed request. */
   readonly correlationId?: string;
   readonly type?: string;
+  /** The parsed problem body (empty when there was none). Read extension members from here. */
+  readonly body: Readonly<Record<string, unknown>>;
+  /** Seconds to wait before retrying (`Retry-After`), or null when the response gave none. */
+  readonly retryAfterSeconds: number | null;
 
   constructor(init: ApiErrorInit) {
     super(init.detail);
@@ -50,6 +58,14 @@ export class ApiError extends Error {
     this.traceId = init.traceId;
     this.correlationId = init.correlationId;
     this.type = init.type;
+    this.body = init.body ?? {};
+    this.retryAfterSeconds = init.retryAfterSeconds ?? null;
+  }
+
+  /** An extension member of the problem body, e.g. `error.extension<CartQuote>('quote')`. */
+  extension<T>(name: string): T | null {
+    const value = this.body[name];
+    return value === undefined || value === null ? null : (value as T);
   }
 
   /** The request never reached the server (offline, DNS, CORS, server down). */
@@ -181,6 +197,25 @@ export function readProblemDetails(body: unknown): Partial<ProblemDetails> | nul
 }
 
 /**
+ * `Retry-After` as whole seconds: either a number of seconds or an HTTP date (RFC 9110).
+ * Returns undefined for a missing or unreadable value.
+ */
+export function parseRetryAfter(
+  value: string | null | undefined,
+  now = Date.now(),
+): number | undefined {
+  if (value === null || value === undefined || value.trim() === '') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  if (/^\d+$/.test(trimmed)) {
+    return Number(trimmed);
+  }
+  const date = Date.parse(trimmed);
+  return Number.isNaN(date) ? undefined : Math.max(0, Math.ceil((date - now) / 1000));
+}
+
+/**
  * Converts any failed HTTP response into an `ApiError`. Server-provided Problem Details win;
  * whatever is missing is filled with a Serbian fallback chosen by status code.
  */
@@ -196,6 +231,8 @@ export function toApiError(response: HttpErrorResponse, correlationId?: string):
     traceId: problem?.traceId,
     type: problem?.type,
     correlationId,
+    body: response.status === 0 ? undefined : (parseBody(response.error) ?? undefined),
+    retryAfterSeconds: parseRetryAfter(response.headers?.get('Retry-After')),
   });
 }
 

@@ -42,5 +42,7 @@ export const serverRoutes: ServerRoute[] = [
     },
   },
   { path: 'korpa', renderMode: RenderMode.Client },
+  { path: 'porucivanje', renderMode: RenderMode.Client },
+  { path: 'porudzbina-primljena', renderMode: RenderMode.Client },
   { path: '**', renderMode: RenderMode.Client },
 ];

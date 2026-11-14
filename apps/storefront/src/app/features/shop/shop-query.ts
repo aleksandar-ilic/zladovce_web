@@ -1,11 +1,12 @@
 import { Params } from '@angular/router';
 import { CatalogProductQuery } from '../../core/data/catalog-api';
 
-/** Sorts offered in the shop. `bestselling` is left out until real sales data exists (Phase 5). */
-export type ShopSort = 'newest' | 'priceAsc' | 'priceDesc' | 'name';
+/** Sorts offered in the shop. `bestselling`: pieces sold in delivered orders, the rest newest first. */
+export type ShopSort = 'newest' | 'bestselling' | 'priceAsc' | 'priceDesc' | 'name';
 
 export const SHOP_SORTS: readonly { value: ShopSort; label: string }[] = [
   { value: 'newest', label: 'Najnovije' },
+  { value: 'bestselling', label: 'Najprodavanije' },
   { value: 'priceAsc', label: 'Cena: od najniže' },
   { value: 'priceDesc', label: 'Cena: od najviše' },
   { value: 'name', label: 'Naziv A–Ž' },

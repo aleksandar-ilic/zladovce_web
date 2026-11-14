@@ -1,6 +1,7 @@
 import {
   HttpClient,
   HttpErrorResponse,
+  HttpHeaders,
   provideHttpClient,
   withInterceptors,
 } from '@angular/common/http';
@@ -8,7 +9,14 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { ApiClient, toHttpParams } from './api-client';
-import { ApiError, asApiError, ClientErrorCode, readProblemDetails, toApiError } from './api-error';
+import {
+  ApiError,
+  asApiError,
+  ClientErrorCode,
+  parseRetryAfter,
+  readProblemDetails,
+  toApiError,
+} from './api-error';
 import { isApiOrigin, isApiUrl } from './api-url';
 import { AppConfig, ConfigError, loadAppConfig, parseAppConfig, provideAppConfig } from './config';
 import { HealthClient } from './health-client';
@@ -150,20 +158,18 @@ describe('apiErrorInterceptor', () => {
   it('parses Problem Details from text responses (health check)', async () => {
     const { health, controller } = setup();
     const pending = failure(firstValueFrom(health.check()));
-    controller
-      .expectOne(CONFIG.healthUrl)
-      .flush(
-        JSON.stringify({
-          ...PROBLEM,
-          status: 503,
-          code: 'UNHEALTHY',
-          detail: 'Baza nije dostupna.',
-        }),
-        {
-          status: 503,
-          statusText: 'Service Unavailable',
-        },
-      );
+    controller.expectOne(CONFIG.healthUrl).flush(
+      JSON.stringify({
+        ...PROBLEM,
+        status: 503,
+        code: 'UNHEALTHY',
+        detail: 'Baza nije dostupna.',
+      }),
+      {
+        status: 503,
+        statusText: 'Service Unavailable',
+      },
+    );
     const error = (await pending) as ApiError;
     expect(error.code).toBe('UNHEALTHY');
     expect(error.detail).toBe('Baza nije dostupna.');
@@ -214,6 +220,36 @@ describe('toApiError / readProblemDetails', () => {
     expect(readProblemDetails({ errors: { name: 'Obavezno', empty: [], bad: [1] } })).toEqual({
       errors: { name: ['Obavezno'] },
     });
+  });
+
+  it('keeps the problem body (extensions) and reads Retry-After', () => {
+    const quote = { lines: [], total: 0 };
+    const conflict = toApiError(
+      response(409, { code: 'CART_CHANGED', detail: 'Korpa je promenjena.', quote }),
+    );
+    expect(conflict.extension('quote')).toEqual(quote);
+    expect(conflict.extension('missing')).toBeNull();
+    expect(conflict.retryAfterSeconds).toBeNull();
+
+    const limited = toApiError(
+      new HttpErrorResponse({
+        status: 429,
+        error: { code: 'RATE_LIMITED', detail: 'Previše pokušaja.' },
+        headers: new HttpHeaders({ 'Retry-After': '120' }),
+      }),
+    );
+    expect(limited.code).toBe('RATE_LIMITED');
+    expect(limited.retryAfterSeconds).toBe(120);
+    expect(toApiError(response(0, null)).body).toEqual({});
+  });
+
+  it('parses Retry-After seconds and HTTP dates', () => {
+    const now = Date.parse('2026-11-14T10:00:00Z');
+    expect(parseRetryAfter('30', now)).toBe(30);
+    expect(parseRetryAfter('Sat, 14 Nov 2026 10:02:00 GMT', now)).toBe(120);
+    expect(parseRetryAfter('', now)).toBeUndefined();
+    expect(parseRetryAfter(null, now)).toBeUndefined();
+    expect(parseRetryAfter('soon', now)).toBeUndefined();
   });
 
   it('asApiError normalises unknown errors', () => {

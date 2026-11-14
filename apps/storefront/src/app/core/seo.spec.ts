@@ -224,6 +224,7 @@ describe('sitemap.xml and robots.txt', () => {
     );
     expect(xml.match(/<url>/g)?.length).toBe(5);
     expect(xml).not.toContain('/korpa');
+    expect(xml).not.toContain('/porucivanje');
   });
 
   it('escapes XML and works without catalog data', () => {
@@ -233,9 +234,16 @@ describe('sitemap.xml and robots.txt', () => {
     expect(normaliseSiteUrl('')).toBe('http://localhost:4200');
   });
 
-  it('robots.txt disallows the cart and points to the sitemap', () => {
+  it('robots.txt disallows cart, checkout and confirmation and points to the sitemap', () => {
     expect(buildRobots('https://zladovce.com')).toBe(
-      'User-agent: *\nDisallow: /korpa\n\nSitemap: https://zladovce.com/sitemap.xml\n',
+      'User-agent: *\nDisallow: /korpa\nDisallow: /porucivanje\nDisallow: /porudzbina-primljena\n\nSitemap: https://zladovce.com/sitemap.xml\n',
     );
+  });
+
+  it('never lists the client-only pages in the sitemap', () => {
+    const xml = buildSitemap('https://zladovce.com', sitemapEntries({ products: ['a'] }));
+    for (const path of ['/korpa', '/porucivanje', '/porudzbina-primljena']) {
+      expect(xml).not.toContain(path);
+    }
   });
 });

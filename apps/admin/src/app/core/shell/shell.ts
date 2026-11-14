@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   signal,
@@ -18,6 +19,7 @@ import { adminRoleLabel } from '@zladovce/shared';
 import { UiBadge } from '@zladovce/ui';
 import { map } from 'rxjs';
 import { ADMIN_NAV } from '../navigation';
+import { OrderSummaryStore } from '../order-summary';
 
 const DESKTOP = '(min-width: 1024px)';
 
@@ -89,7 +91,19 @@ const DESKTOP = '(min-width: 1024px)';
                 >
                   <path [attr.d]="item.icon" />
                 </svg>
-                <span matListItemTitle>{{ item.label }}</span>
+                <span matListItemTitle class="flex items-center justify-between gap-2"
+                  >{{ item.label }}
+                  @if (item.badge === 'receivedOrders' && receivedOrders() > 0) {
+                    <span
+                      class="inline-flex min-w-6 items-center justify-center rounded-full bg-danger-600 px-1.5 py-0.5 text-xs font-bold text-white"
+                      data-testid="nav-badge"
+                      >{{ receivedOrders()
+                      }}<span class="sr-only">
+                        {{ receivedOrders() === 1 ? 'nova porudžbina' : 'novih porudžbina' }}</span
+                      ></span
+                    >
+                  }
+                </span>
               </a>
             }
           </mat-nav-list>
@@ -159,6 +173,9 @@ export class Shell {
   protected readonly drawerOpen = signal(false);
   protected readonly signingOut = signal(false);
 
+  private readonly orderSummary = inject(OrderSummaryStore);
+  /** New orders (Received) for the "Porudžbine" badge; refreshed every minute and on navigation. */
+  protected readonly receivedOrders = this.orderSummary.received;
   protected readonly profile = this.auth.profile;
   protected readonly user = this.auth.user;
   protected readonly roleLabel = computed(() => adminRoleLabel(this.auth.role()));
@@ -169,6 +186,7 @@ export class Shell {
 
   constructor() {
     void this.auth.loadProfile();
+    this.orderSummary.start(inject(DestroyRef));
 
     // The session can end at any time (sign-out, expired token, deactivated account).
     effect(() => {

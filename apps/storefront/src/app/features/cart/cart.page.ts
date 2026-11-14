@@ -1,43 +1,27 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CartQuote, CartQuoteLine } from '@zladovce/models';
+import { CartQuoteLine } from '@zladovce/models';
 import { CART_MAX_LINE_QUANTITY, CartStore } from '@zladovce/shared';
 import { UiButton, UiCard, UiEmptyState, UiErrorState, UiLoadingState } from '@zladovce/ui';
 import { formatRsd, RsdPipe } from '@zladovce/utilities';
 import { lineLabel } from '../../core/cart/cart-messages';
+import {
+  checkoutBlockedReason,
+  freeShippingText,
+  minimumOrderText,
+  shippingText,
+} from '../../core/cart/cart-summary';
+import { CHECKOUT_PATH } from '../../core/navigation';
 import { CartQuoteService } from '../../core/cart/cart-quote.service';
 import { ProductImage } from '../../shared/product-image';
 import { QuantityStepper } from '../../shared/quantity-stepper';
 
-/** Shipping row of the summary. */
-export function shippingText(quote: CartQuote): string {
-  if (!quote.shipping.enabled) {
-    return 'Trenutno nije dostupna';
-  }
-  return quote.shipping.isFree || quote.shipping.price === 0
-    ? 'Besplatna dostava'
-    : formatRsd(quote.shipping.price);
-}
-
-/** "Još 1.200 RSD do besplatne dostave." – only while the threshold is not reached. */
-export function freeShippingText(quote: CartQuote): string | null {
-  const missing = quote.shipping.amountUntilFreeShipping;
-  return missing !== null && missing > 0 ? `Još ${formatRsd(missing)} do besplatne dostave.` : null;
-}
-
-/** Minimum order message, only while the subtotal is below the minimum. */
-export function minimumOrderText(quote: CartQuote): string | null {
-  if (quote.meetsMinimumOrder || quote.minOrderAmount === null || quote.lines.length === 0) {
-    return null;
-  }
-  const missing = quote.amountUntilMinimumOrder ?? quote.minOrderAmount - quote.subtotal;
-  return `Najmanji iznos porudžbine je ${formatRsd(quote.minOrderAmount)}. Dodajte proizvode u vrednosti od još ${formatRsd(missing)}.`;
-}
+export { freeShippingText, minimumOrderText, shippingText } from '../../core/cart/cart-summary';
 
 /**
  * Cart (client-rendered): every line priced by `POST /cart/quote` – re-quoted after each change
- * (debounced), with adjustments explained in plain Serbian. Checkout arrives in Phase 5: the
- * "Nastavi na poručivanje" button is shown disabled with an honest note, never as a dead link.
+ * (debounced), with adjustments explained in plain Serbian. "Nastavi na poručivanje" opens the
+ * checkout when the quote allows it (`canCheckout`); otherwise the reason is shown under it.
  */
 @Component({
   selector: 'sf-cart-page',
@@ -230,21 +214,39 @@ export function minimumOrderText(quote: CartQuote): string | null {
                 <p class="mt-4 text-sm text-ink-700">Dostava je trenutno isključena.</p>
               }
               <p class="mt-4 text-sm text-ink-700">Plaćanje pouzećem, kuriru pri preuzimanju.</p>
-              <button
-                uiButton
-                type="button"
-                block
-                size="lg"
-                class="mt-5"
-                disabled
-                aria-describedby="sf-checkout-note"
-                data-testid="checkout"
-              >
-                Nastavi na poručivanje
-              </button>
-              <p id="sf-checkout-note" class="mt-2 text-center text-sm text-ink-700">
-                Poručivanje će uskoro biti dostupno.
-              </p>
+              @if (canCheckout()) {
+                <a
+                  uiButton
+                  block
+                  size="lg"
+                  class="mt-5"
+                  [routerLink]="checkoutPath"
+                  data-testid="checkout"
+                  >Nastavi na poručivanje</a
+                >
+              } @else {
+                <button
+                  uiButton
+                  type="button"
+                  block
+                  size="lg"
+                  class="mt-5"
+                  disabled
+                  aria-describedby="sf-checkout-note"
+                  data-testid="checkout"
+                >
+                  Nastavi na poručivanje
+                </button>
+                <p
+                  id="sf-checkout-note"
+                  class="mt-2 text-center text-sm text-ink-700"
+                  data-testid="checkout-note"
+                >
+                  {{
+                    busy() ? 'Sačekajte trenutak, proveravamo cene i dostupnost…' : blockedReason()
+                  }}
+                </p>
+              }
             </aside>
           </div>
         }
@@ -258,6 +260,7 @@ export class CartPage {
   private readonly removed = signal<string | null>(null);
 
   protected readonly quote = this.quotes.quote;
+  protected readonly checkoutPath = CHECKOUT_PATH;
   protected readonly busy = computed(() => this.quotes.loading() || this.quotes.stale());
   /** Quote lines that are still in the cart (a removed line disappears at once). */
   protected readonly lines = computed(() => {
@@ -276,6 +279,11 @@ export class CartPage {
   protected readonly minimumOrder = computed(() => {
     const quote = this.quote();
     return quote && !this.busy() ? minimumOrderText(quote) : null;
+  });
+  protected readonly canCheckout = computed(() => !this.busy() && !!this.quote()?.canCheckout);
+  protected readonly blockedReason = computed(() => {
+    const quote = this.quote();
+    return quote ? checkoutBlockedReason(quote) : null;
   });
   protected readonly announcement = computed(() => {
     const removed = this.removed();

@@ -18,6 +18,20 @@ import {
 } from './catalog-labels';
 import { adminRoleLabel } from './labels';
 import { matchingValues, notBlank } from './validators';
+import {
+  isOrderStatus,
+  ORDER_STATUS_LABELS,
+  ORDER_STATUSES,
+  orderStatusLabel,
+  paymentMethodLabel,
+} from './order-labels';
+import {
+  emailAddressValidator,
+  normaliseSerbianPhone,
+  personNameValidator,
+  postalCodeValidator,
+  serbianPhoneValidator,
+} from './serbian-contact';
 
 const stored = (): unknown => JSON.parse(localStorage.getItem(CART_STORAGE_KEY) ?? 'null');
 const seed = (value: unknown): void =>
@@ -401,5 +415,65 @@ describe('catalog labels', () => {
       'Naziv Ž–A',
       'Poslednje izmenjeno',
     ]);
+  });
+});
+
+describe('Serbian contact rules (same as the API)', () => {
+  const control = (value: unknown) => new FormControl(value);
+
+  it('normalises Serbian phone numbers to E.164 and refuses others', () => {
+    expect(normaliseSerbianPhone('064 123 4567')).toBe('+381641234567');
+    expect(normaliseSerbianPhone('+381 64 123 4567')).toBe('+381641234567');
+    expect(normaliseSerbianPhone('00381641234567')).toBe('+381641234567');
+    expect(normaliseSerbianPhone('+381 (0)64 123 4567')).toBe('+381641234567');
+    expect(normaliseSerbianPhone('064/123-4567')).toBe('+381641234567');
+    expect(normaliseSerbianPhone('011 123 4567')).toBe('+381111234567');
+    expect(normaliseSerbianPhone('64 123 4567')).toBeNull();
+    expect(normaliseSerbianPhone('0049 30 1234567')).toBeNull();
+    expect(normaliseSerbianPhone('064 12')).toBeNull();
+    expect(normaliseSerbianPhone('064 123 4567 ext')).toBeNull();
+    expect(normaliseSerbianPhone('')).toBeNull();
+  });
+
+  it('validates phone, postal code, names and e-mail with Serbian messages', () => {
+    expect(serbianPhoneValidator(control('064 123 4567'))).toBeNull();
+    expect(serbianPhoneValidator(control(''))).toBeNull();
+    expect(serbianPhoneValidator(control('123'))?.['serbianPhone']).toContain('064 123 4567');
+    expect(postalCodeValidator(control('18000'))).toBeNull();
+    expect(postalCodeValidator(control(' 18000 '))).toBeNull();
+    expect(postalCodeValidator(control('1800'))).toEqual({
+      postalCode: 'Poštanski broj ima tačno 5 cifara.',
+    });
+    expect(postalCodeValidator(control('18 000'))).not.toBeNull();
+    const name = personNameValidator('Ime');
+    expect(name(control('Đorđe'))).toBeNull();
+    expect(name(control("Ana-Marija O'Neil Jr."))).toBeNull();
+    expect(name(control('R2D2'))).toEqual({
+      personName: 'Ime sme da sadrži samo slova, razmak, crticu, tačku i apostrof.',
+    });
+    expect(name(control('-Ana'))).not.toBeNull();
+    expect(name(control('a'.repeat(101)))?.['personName']).toContain('najviše 100');
+    expect(emailAddressValidator(control('ana@primer.rs'))).toBeNull();
+    expect(emailAddressValidator(control('ana@primer'))).not.toBeNull();
+    expect(emailAddressValidator(control('ana primer@x.rs'))).not.toBeNull();
+  });
+});
+
+describe('order labels', () => {
+  it('names every status in Serbian', () => {
+    expect(ORDER_STATUSES.map((s) => ORDER_STATUS_LABELS[s])).toEqual([
+      'Primljena',
+      'Prihvaćena',
+      'U pripremi',
+      'Poslata',
+      'Neuspešna isporuka',
+      'Isporučena',
+      'Otkazana',
+      'Odbijena',
+    ]);
+    expect(orderStatusLabel('DeliveryFailed')).toBe('Neuspešna isporuka');
+    expect(isOrderStatus('Shipped')).toBe(true);
+    expect(isOrderStatus('shipped')).toBe(false);
+    expect(paymentMethodLabel('CashOnDelivery')).toBe('Plaćanje pouzećem');
   });
 });

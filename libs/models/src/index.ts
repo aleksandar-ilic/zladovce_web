@@ -128,9 +128,53 @@ export type CartQuoteLine = Schemas['CartQuoteLine'];
 export type CartQuoteAdjustment = Schemas['CartQuoteAdjustment'];
 export type CartAdjustmentReason = Schemas['CartAdjustmentReason'];
 export type CartQuoteShipping = Schemas['CartQuoteShipping'];
+/** Why a `quantityReduced` adjustment capped the line: `stock` or the per-order cap `orderLimit`. */
+export type QuantityLimitReason = NonNullable<Schemas['QuantityLimitReason']>;
 
 export type SeoRoute = Schemas['SeoRoute'];
 export type SeoRoutes = Schemas['SeoRoutesResponse'];
 
-/** Sort values of `GET /catalog/products`. `bestselling` is ordered like `newest` until Phase 5. */
+/** Sort values of `GET /catalog/products`. `bestselling`: pieces sold in delivered orders, then newest. */
 export type PublicProductSort = 'newest' | 'priceAsc' | 'priceDesc' | 'name' | 'bestselling';
+
+// ---------------------------------------------------------------------------------------------
+// Phase 5 – checkout, orders, couriers and store settings (generated).
+// ---------------------------------------------------------------------------------------------
+export type CreateOrderRequest = Schemas['CreateOrderRequest'];
+export type CreateOrderItemRequest = Schemas['CreateOrderItemRequest'];
+export type CheckoutCustomerRequest = Schemas['CheckoutCustomerRequest'];
+export type CheckoutAddressRequest = Schemas['CheckoutAddressRequest'];
+export type PlacedOrder = Schemas['PlacedOrderResponse'];
+export type PlacedOrderItem = Schemas['PlacedOrderItem'];
+export type PaymentMethod = Schemas['PaymentMethod'];
+
+export type OrderStatus = Schemas['OrderStatus'];
+export type StockReturnPolicy = Schemas['StockReturnPolicy'];
+export type AllowedStatusTransition = Schemas['AllowedStatusTransition'];
+export type AdminOrderListItem = Schemas['AdminOrderListItem'];
+export type AdminOrderDetail = Schemas['AdminOrderDetail'];
+export type AdminOrderItem = Schemas['AdminOrderItem'];
+export type AdminOrderContact = Schemas['AdminOrderContact'];
+export type AdminOrderAddress = Schemas['AdminOrderAddress'];
+export type AdminOrderPayment = Schemas['AdminOrderPayment'];
+export type AdminOrderShipment = Schemas['AdminOrderShipment'];
+export type AdminOrderTimelineEntry = Schemas['AdminOrderTimelineEntry'];
+export type AdminOrderNote = Schemas['AdminOrderNote'];
+export type OrderStatusCount = Schemas['OrderStatusCount'];
+export type OrderSummary = Schemas['OrderSummaryResponse'];
+export type ChangeOrderStatusRequest = Schemas['ChangeOrderStatusRequest'];
+export type NewShipmentRequest = Schemas['NewShipmentRequest'];
+export type UpdateShipmentRequest = Schemas['UpdateShipmentRequest'];
+export type SetOrderPaymentRequest = Schemas['SetOrderPaymentRequest'];
+export type AddOrderNoteRequest = Schemas['AddOrderNoteRequest'];
+
+/** Sort values of `GET /admin/orders`. */
+export type AdminOrderSort = 'newest' | 'oldest' | 'totalDesc' | 'totalAsc';
+
+export type Courier = Schemas['CourierResponse'];
+export type CourierList = Schemas['CourierListResponse'];
+export type SaveCourierRequest = Schemas['SaveCourierRequest'];
+
+export type AdminStoreSettings = Schemas['AdminStoreSettingsResponse'];
+export type UpdateStoreSettingsRequest = Schemas['UpdateStoreSettingsRequest'];
+export type StoreLink = Schemas['StoreLinkDto'];

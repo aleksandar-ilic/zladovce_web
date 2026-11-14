@@ -6,8 +6,8 @@
 /** Pages that exist without catalog data and are always prerendered. */
 export const STATIC_PATHS = ['/', '/prodavnica'];
 
-/** Client-only pages that must not be crawled. Checkout and tracking are added with Phase 5. */
-export const DISALLOWED_PATHS = ['/korpa'];
+/** Client-only pages that must not be crawled (and are never in the sitemap). Tracking follows in Phase 6. */
+export const DISALLOWED_PATHS = ['/korpa', '/porucivanje', '/porudzbina-primljena'];
 
 export const DEFAULT_SITE_URL = 'http://localhost:4200';
 

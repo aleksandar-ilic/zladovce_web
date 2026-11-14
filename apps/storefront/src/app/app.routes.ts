@@ -37,6 +37,19 @@ export const routes: Routes = [
     loadComponent: () => import('./features/cart/cart.page').then((m) => m.CartPage),
   },
   {
+    path: 'porucivanje',
+    title: 'Poručivanje – Zladovce',
+    data: { noindex: true } satisfies SeoData,
+    loadComponent: () => import('./features/checkout/checkout.page').then((m) => m.CheckoutPage),
+  },
+  {
+    path: 'porudzbina-primljena',
+    title: 'Porudžbina je primljena – Zladovce',
+    data: { noindex: true } satisfies SeoData,
+    loadComponent: () =>
+      import('./features/checkout/confirmation.page').then((m) => m.ConfirmationPage),
+  },
+  {
     path: '**',
     title: 'Stranica nije pronađena – Zladovce',
     data: { noindex: true } satisfies SeoData,

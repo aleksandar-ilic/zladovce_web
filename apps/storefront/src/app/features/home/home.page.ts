@@ -28,6 +28,7 @@ interface TextItem {
 }
 
 export const FEATURED_LIMIT = 4;
+export const BESTSELLER_LIMIT = 4;
 
 /** Delivery facts from the store settings; only values that are actually configured. */
 export function deliveryFacts(shipping: PublicStoreShipping | null): TextItem[] {
@@ -238,10 +239,39 @@ export function deliveryFacts(shipping: PublicStoreShipping | null): TextItem[] 
       </section>
     }
 
-    <!--
-      Extension point: "Najprodavanije". Added in Phase 5, when GET /catalog/products?sort=bestselling
-      is ordered by real sales; until then the section is not rendered at all.
-    -->
+    <!-- Best sellers: only real sales (delivered orders); not rendered at all while there are none. -->
+    @if (bestsellerItems().length > 0) {
+      <section
+        class="mx-auto max-w-page px-gutter py-section"
+        aria-labelledby="najprodavanije-naslov"
+      >
+        <div class="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p class="eyebrow">Kupci biraju</p>
+            <h2 id="najprodavanije-naslov" class="mt-3 text-3xl md:text-4xl">Najprodavanije</h2>
+          </div>
+          <a
+            routerLink="/prodavnica"
+            [queryParams]="{ sort: 'bestselling' }"
+            class="font-semibold text-olive-800 underline underline-offset-4"
+            >Sve po prodaji →</a
+          >
+        </div>
+        <ul
+          class="mt-10 grid gap-5 min-[480px]:grid-cols-2 md:gap-7 lg:grid-cols-4"
+          data-testid="home-bestsellers"
+        >
+          @for (product of bestsellerItems(); track product.id) {
+            <li>
+              <sf-product-card
+                [product]="product"
+                sizes="(min-width: 1024px) 18rem, (min-width: 480px) 45vw, 92vw"
+              />
+            </li>
+          }
+        </ul>
+      </section>
+    }
 
     <!-- Family story -->
     <section id="o-nama" class="scroll-mt-24" aria-labelledby="o-nama-naslov">
@@ -305,10 +335,9 @@ export function deliveryFacts(shipping: PublicStoreShipping | null): TextItem[] 
             </li>
           }
         </ol>
-        <p class="mt-8 text-sm text-ink-700">
-          Poručivanje preko sajta biće dostupno uskoro. Proizvode već sada možete da razgledate i
-          dodate u korpu.
-        </p>
+        <div class="mt-8">
+          <a uiButton routerLink="/prodavnica">Počnite od prodavnice</a>
+        </div>
 
         @if (delivery().length > 0) {
           <div
@@ -381,6 +410,8 @@ export class HomePage {
 
   protected readonly featured = signal<Remote<PublicProductListItem[]>>(LOADING);
   protected readonly categoriesRemote = this.categoriesStore.remote;
+  /** Empty while loading, after an error and when nothing has sold yet: the section is then hidden. */
+  protected readonly bestsellerItems = signal<PublicProductListItem[]>([]);
 
   protected readonly featuredItems = computed(() => {
     const state = this.featured();
@@ -443,6 +474,17 @@ export class HomePage {
         takeUntilDestroyed(),
       )
       .subscribe((state) => this.featured.set(state));
+
+    const bestsellers = this.api.bestsellers(BESTSELLER_LIMIT);
+    (this.hydrating
+      ? concat(
+          bestsellers.pipe(catchError(() => EMPTY)),
+          this.api.bestsellers(BESTSELLER_LIMIT, { fresh: true }).pipe(catchError(() => EMPTY)),
+        )
+      : bestsellers.pipe(catchError(() => EMPTY))
+    )
+      .pipe(takeUntilDestroyed())
+      .subscribe((items) => this.bestsellerItems.set(items));
   }
 
   protected countLabel(count: number): string {

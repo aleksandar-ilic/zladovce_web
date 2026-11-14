@@ -231,6 +231,30 @@ describe('pages', () => {
     expect(page.querySelector('[data-testid="delivery"]')).toBeNull();
   });
 
+  it('homepage shows "Najprodavanije" only when something has sold', async () => {
+    const { harness, page } = await open('/');
+    const http = TestBed.inject(HttpTestingController);
+    const bestsellers = http.match((r) => r.url === `${API}/catalog/bestsellers`);
+    expect(bestsellers.length).toBe(1);
+    expect(bestsellers[0]!.request.params.get('limit')).toBe('4');
+    bestsellers[0]!.flush({ items: [] });
+    await settle(() => harness.detectChanges());
+    expect(page.querySelector('[data-testid="home-bestsellers"]')).toBeNull();
+    expect(text(page)).not.toContain('Najprodavanije');
+  });
+
+  it('homepage lists the best sellers from the API', async () => {
+    const { harness, page } = await open('/');
+    const http = TestBed.inject(HttpTestingController);
+    http
+      .expectOne((r) => r.url === `${API}/catalog/bestsellers`)
+      .flush({ items: [listItem(), listItem({ id: 'p2', slug: 'sok-od-jabuke', name: 'Sok' })] });
+    await settle(() => harness.detectChanges());
+    const section = page.querySelector('[data-testid="home-bestsellers"]');
+    expect(section?.querySelectorAll('[data-testid="product-card"]').length).toBe(2);
+    expect(text(page)).toContain('Najprodavanije');
+  });
+
   it('delivery facts list only configured values', () => {
     expect(deliveryFacts(STORE.shipping)).toEqual([]);
     expect(deliveryFacts(null)).toEqual([]);
@@ -275,6 +299,8 @@ describe('render modes', () => {
     expect(mode('prodavnica/:categorySlug')).toBe(RenderMode.Prerender);
     expect(mode('proizvod/:slug')).toBe(RenderMode.Prerender);
     expect(mode('korpa')).toBe(RenderMode.Client);
+    expect(mode('porucivanje')).toBe(RenderMode.Client);
+    expect(mode('porudzbina-primljena')).toBe(RenderMode.Client);
   });
 });
 

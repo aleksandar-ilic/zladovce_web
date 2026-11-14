@@ -23,3 +23,12 @@ export const FOOTER_NAV: readonly NavItem[] = [...MAIN_NAV, { label: 'Korpa', pa
 
 /** The cart link is shown separately in the header, with the item count. */
 export const CART_PATH = '/korpa';
+
+export const CHECKOUT_PATH = '/porucivanje';
+export const ORDER_CONFIRMATION_PATH = '/porudzbina-primljena';
+
+/**
+ * Page with the terms of purchase, linked from the checkout's terms checkbox. The page is built
+ * in Phase 7 (`/uslovi-koriscenja`); while this is null the label is plain text, never a dead link.
+ */
+export const TERMS_PAGE: NavItem | null = null;

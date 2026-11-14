@@ -150,7 +150,11 @@ export class CartQuoteService {
       );
   }
 
-  private apply(quote: CartQuote): void {
+  /**
+   * Applies a quote to the cart: its lines replace the cart and its adjustments become notices.
+   * Also used by checkout for the fresh quote that comes with a 409 refusal. Returns the notices.
+   */
+  apply(quote: CartQuote): readonly string[] {
     for (const line of quote.lines) {
       this.labels.set(line.variantId, lineLabel(line));
     }
@@ -171,5 +175,6 @@ export class CartQuoteService {
     if (notices.length > 0) {
       this.notices.set(notices);
     }
+    return notices;
   }
 }

@@ -17,10 +17,13 @@ export function adjustmentMessage(adjustment: CartQuoteAdjustment, name: string 
       return product
         ? `Proizvod ${product} više nije dostupan i uklonjen je iz korpe.`
         : 'Jedan proizvod više nije dostupan i uklonjen je iz korpe.';
-    case 'quantityReduced':
-      return product
-        ? `Količina proizvoda ${product} je smanjena na ${adjustment.availableQuantity} jer više nema na stanju.`
-        : `Količina jednog proizvoda je smanjena na ${adjustment.availableQuantity} jer više nema na stanju.`;
+    case 'quantityReduced': {
+      const subject = product ? `Količina proizvoda ${product}` : 'Količina jednog proizvoda';
+      const amount = adjustment.availableQuantity;
+      return adjustment.limitReason === 'orderLimit'
+        ? `${subject} je smanjena na ${amount} jer je najveća količina po porudžbini ${amount}.`
+        : `${subject} je smanjena na ${amount} jer više nema na stanju.`;
+    }
     case 'priceChanged': {
       const from = formatRsd(adjustment.previousUnitPrice);
       const to = formatRsd(adjustment.unitPrice);

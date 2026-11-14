@@ -83,6 +83,7 @@ describe('CartPage', () => {
         minOrderAmount: 2000,
         meetsMinimumOrder: false,
         amountUntilMinimumOrder: 820,
+        canCheckout: false,
       }),
     );
     await render();
@@ -99,11 +100,51 @@ describe('CartPage', () => {
       'Još 3.820 RSD do besplatne dostave.',
     );
     expect(text(page.querySelector('[data-testid="minimum-order"]'))).toContain('2.000 RSD');
+    // Below the minimum order: the checkout button is disabled and says why.
     const checkout = page.querySelector<HTMLButtonElement>('[data-testid="checkout"]');
+    expect(checkout?.tagName).toBe('BUTTON');
     expect(checkout?.disabled).toBe(true);
-    expect(text(page)).toContain('Poručivanje će uskoro biti dostupno.');
+    expect(nb(text(page.querySelector('[data-testid="checkout-note"]')))).toContain(
+      'Najmanji iznos porudžbine je 2.000 RSD',
+    );
+    expect(text(page)).not.toContain('uskoro');
     expect(nb(page.querySelector('[data-testid="cart-announcement"]')?.textContent)).toContain(
       'Ukupno: 1.530 RSD',
+    );
+  });
+
+  it('links to the checkout when the quote allows ordering, and explains disabled shipping', async () => {
+    localStorage.setItem(
+      CART_STORAGE_KEY,
+      JSON.stringify({ version: 2, lines: [{ variantId: VARIANT_370.id, quantity: 2 }] }),
+    );
+    const { page, http, render } = await openCart();
+    await render();
+    pendingQuote(http)[0]!.flush(quote([quoteLine()]));
+    await render();
+    const link = page.querySelector<HTMLAnchorElement>('[data-testid="checkout"]');
+    expect(link?.tagName).toBe('A');
+    expect(link?.getAttribute('href')).toBe('/porucivanje');
+    expect(page.querySelector('[data-testid="checkout-note"]')).toBeNull();
+  });
+
+  it('explains when shipping is switched off', async () => {
+    localStorage.setItem(
+      CART_STORAGE_KEY,
+      JSON.stringify({ version: 2, lines: [{ variantId: VARIANT_370.id, quantity: 2 }] }),
+    );
+    const { page, http, render } = await openCart();
+    await render();
+    const base = quote([quoteLine()]);
+    pendingQuote(http)[0]!.flush({
+      ...base,
+      canCheckout: false,
+      shipping: { ...base.shipping, enabled: false, price: 0 },
+    });
+    await render();
+    expect(page.querySelector<HTMLButtonElement>('[data-testid="checkout"]')?.disabled).toBe(true);
+    expect(text(page.querySelector('[data-testid="checkout-note"]'))).toContain(
+      'Dostava je trenutno isključena',
     );
   });
 

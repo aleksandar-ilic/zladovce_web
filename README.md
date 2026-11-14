@@ -17,7 +17,7 @@ npm ci
 
 | Command | What it does |
 |---|---|
-| `npm run start:storefront` | Storefront dev server on http://localhost:4200 |
+| `npm run start:storefront` | Storefront dev server on http://localhost:4200 (use `npx ng serve storefront --port 4210` when 4200 is taken; the dev API allows both origins) |
 | `npm run start:admin` | Admin dev server on http://localhost:4201 |
 | `npm run build` | Production build of both apps into `dist/` |
 | `npm run build:storefront` | Storefront only: static, prerendered output in `dist/storefront/browser`, then `sitemap.xml` and `robots.txt` (`tools/generate-seo-files.mjs`) |
@@ -189,7 +189,7 @@ It is run by hand after the contract changes and is not part of the build.
 
 | Page | Route | Rendering |
 |---|---|---|
-| Početna | `/` | Prerendered. Hero, featured categories and products (`featured=true`), family story, "Zašto naši proizvodi", "Kako poručiti", delivery facts from `GET /store` (only configured values). "Najprodavanije" is left out until real sales data exists (Phase 5). |
+| Početna | `/` | Prerendered. Hero, featured categories and products (`featured=true`), "Najprodavanije" (`GET /catalog/bestsellers`, rendered only when something has sold), family story, "Zašto naši proizvodi", "Kako poručiti", delivery facts from `GET /store` (only configured values). |
 | Prodavnica | `/prodavnica` | Prerendered. Search, category, price range, "na stanju", sort and paging all live in the URL query (`q`, `minPrice`, `maxPrice`, `inStock=true`, `sort`, `page`); small screens get a filter drawer. |
 | Kategorija | `/prodavnica/:categorySlug` | Prerendered for every slug of `GET /seo/routes`; same grid with the category header. |
 | Proizvod | `/proizvod/:slug` | Prerendered for every slug; gallery, packages, price/discount, availability, quantity, "Dodaj u korpu", related products. |
@@ -202,7 +202,10 @@ It is run by hand after the contract changes and is not part of the build.
   synchronised between tabs. `CartQuoteService` prices it with `POST /cart/quote` (debounced, the newer request
   cancels the older, answers for a changed cart are discarded), overwrites the cart from the quote lines and turns
   adjustments into Serbian notices. The product page never lets a line exceed `maxOrderQuantity`.
-- **Checkout** is Phase 5: "Nastavi na poručivanje" is shown disabled with the note "Poručivanje će uskoro biti dostupno."
+- **Checkout** (Phase 5, below): "Nastavi na poručivanje" links to `/porucivanje` when the quote says `canCheckout`; otherwise
+  the button is disabled and the reason (minimum order, shipping switched off) is shown under it.
+- Quote adjustments name the reason of a reduced quantity: `limitReason` `stock` ("…jer više nema na stanju") or `orderLimit`
+  ("…jer je najveća količina po porudžbini N").
 - **SEO.** `SeoService` sets title, description, robots, canonical, Open Graph and JSON-LD (`Product` with one RSD
   offer per package, `BreadcrumbList`) per page.
 
@@ -222,6 +225,50 @@ ZLADOVCE_API_BASE_URL=https://api.example.com/api/v1 ZLADOVCE_SITE_URL=https://z
 - The host serves `dist/storefront/browser` and must rewrite unknown paths (a product or category created after the
   build, `/korpa`) to `/index.csr.html` with status 200; the browser renders them.
 - Rebuild after catalog changes (the Phase 8 build webhook); price and stock are always fetched live anyway.
+
+## Checkout and orders (Phase 5)
+
+### Storefront
+
+| Page | Route | Rendering |
+|---|---|---|
+| Poručivanje | `/porucivanje` | Client only, `noindex`, disallowed in `robots.txt`, never in the sitemap |
+| Porudžbina primljena | `/porudzbina-primljena` | Same |
+
+- **Checkout** (`features/checkout`). Fresh quote on open; the form (Ime, Prezime, E-pošta, Telefon, Ulica i broj, Grad,
+  Poštanski broj, Napomena za dostavu) is validated in the browser with the API's rules (`@zladovce/shared`
+  `serbian-contact.ts`: names, e-mail, Serbian phone `+381…`/`00381…`/`0…`, 5-digit postal code) and again by the API, whose
+  messages land under the same fields (`customer.phone` → `customer.phone` control). Cash on delivery is the only payment
+  method. The terms checkbox is plain text until `TERMS_PAGE` in `core/navigation.ts` points to the Phase 7 page.
+- **Order request** = the lines and prices of the quote on screen (`knownUnitPrice`, `expectedTotal`). A 409 with a fresh
+  `quote` (`CART_CHANGED`, `INSUFFICIENT_STOCK`, `MINIMUM_ORDER_NOT_MET`, `SHIPPING_DISABLED`) is applied to the cart through
+  `CartQuoteService.apply`, the changes are listed and the customer presses "Poruči" again. `429` shows a wait message
+  (`Retry-After`) and disables the button for that time.
+- **Idempotency** (`CheckoutSession`): one UUID per submission, kept in `sessionStorage` (so a reload after a lost response
+  repeats the same submission instead of creating a second order); sent on every retry, also after 400/409/429; replaced only
+  after a successful order or `409 IDEMPOTENCY_KEY_REUSED`. A second submit while one is running is ignored.
+- **After success** the confirmation is stored in `sessionStorage` (the confirmation page survives a reload), the form draft
+  is removed and only then the cart is cleared. Nothing personal is written to `localStorage`; the form draft lives in
+  `sessionStorage` of the tab only. No tracking code is shown until Phase 6.
+- Shop sort `bestselling` ("Najprodavanije").
+
+### Admin
+
+| Page | Route | Who |
+|---|---|---|
+| Porudžbine | `/porudzbine` | Owner, Staff. Tabs "Za obradu" (default: Primljena + Prihvaćena + U pripremi), each status, "Sve", with counts from `GET /admin/orders/summary`; search, period (Serbian date picker), sort and paging in the URL (`status`, `q`, `from`, `to`, `sort`, `page`, `pageSize`). |
+| Porudžbina | `/porudzbine/:id` | Owner, Staff. Next step as buttons derived from `allowedNextStatuses` (positive step filled, destructive last and red), status dialog (customer message, internal note; courier/tracking/date for "Poslata"; required restock choice for a failed delivery that is cancelled; what happens to the stock), payment for delivered orders, shipments (editable, tracking link), internal notes, history. |
+| Kuriri | `/kuriri` | Owner (`roleGuard('Owner')`, hidden from Staff). Create, edit, switch off; tracking address must be https and contain `{trackingNumber}`. |
+| Podešavanja | `/podesavanja` | Owner. Sections Osnovno, Kontakt, Dostava ("Bez praga" switches send null), Društvene mreže (https, ≤ 10 extra links), SEO; `version`, unsaved-changes guard. |
+
+- `OrderSummaryStore` (`core/order-summary.ts`) feeds the "Porudžbine" menu badge (Received orders), the dashboard card
+  "Porudžbine za obradu" and the tab counts; refreshed every 60 s, after navigation and after every change. Requests never overlap.
+- Every order change answers with the whole detail; its `version` is used for the next status or payment change.
+  `409 CONCURRENT_EDIT` shows "Učitaj najnovije stanje"; `409 INVALID_STATUS_TRANSITION` reloads the order and explains.
+- Dates typed in the admin are Serbian calendar days (`shared/serbian-dates.ts`, `14.11.2026.`); today is sent as null
+  (= now on the server), an earlier day as noon Europe/Belgrade, never before the order.
+- `applyServerErrors` moved to `@zladovce/shared` (the admin's `shared/server-errors.ts` re-exports it).
+- `ApiError` now keeps the whole problem body (`extension('quote')`, `extension('allowedNextStatuses')`) and `retryAfterSeconds`.
 
 ## Admin catalog (Phase 3)
 

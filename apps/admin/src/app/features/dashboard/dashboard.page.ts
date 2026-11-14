@@ -13,6 +13,7 @@ import { adminRoleLabel } from '@zladovce/shared';
 import { UiBadge, UiCard, UiCardTitle, UiErrorState, UiLoadingState } from '@zladovce/ui';
 import { SrDatePipe } from '@zladovce/utilities';
 import { LowStockCard } from './low-stock-card';
+import { OrdersCard } from './orders-card';
 
 type HealthState =
   | { status: 'loading' }
@@ -20,17 +21,29 @@ type HealthState =
   | { status: 'error'; error: ApiError };
 
 /**
- * Kontrolna tabla: who is signed in according to `GET /admin/me`, whether the API answers and
- * which packages are running low (Phase 3). Phase 7 adds the business metrics and charts.
+ * Kontrolna tabla: orders waiting for work (Phase 5), packages running low (Phase 3), who is
+ * signed in and whether the API answers. Phase 7 adds the business metrics and charts.
  */
 @Component({
   selector: 'adm-dashboard-page',
-  imports: [UiCard, UiCardTitle, UiBadge, UiLoadingState, UiErrorState, SrDatePipe, LowStockCard],
+  imports: [
+    UiCard,
+    UiCardTitle,
+    UiBadge,
+    UiLoadingState,
+    UiErrorState,
+    SrDatePipe,
+    LowStockCard,
+    OrdersCard,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <h1 class="text-3xl">Kontrolna tabla</h1>
 
     <div class="mt-6 grid max-w-5xl gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <adm-orders-card />
+      <adm-low-stock-card />
+
       <ui-card data-testid="welcome">
         @switch (profile().status) {
           @case ('loaded') {
@@ -91,8 +104,6 @@ type HealthState =
           }
         }
       </ui-card>
-
-      <adm-low-stock-card />
     </div>
   `,
 })

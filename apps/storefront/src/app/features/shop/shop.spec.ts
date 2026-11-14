@@ -19,6 +19,7 @@ import {
   pageWindow,
   parseShopQuery,
   productCountLabel,
+  SHOP_SORTS,
   shopQueryParams,
   toCatalogQuery,
   withChange,
@@ -48,11 +49,13 @@ describe('shop query ↔ URL', () => {
       parseShopQuery({
         minPrice: '-5',
         maxPrice: 'x',
-        sort: 'bestselling',
+        sort: 'popular',
         page: '0',
         inStock: 'yes',
       }),
     ).toEqual(EMPTY_SHOP_QUERY);
+    expect(parseShopQuery({ sort: 'bestselling' }).sort).toBe('bestselling');
+    expect(SHOP_SORTS.find((sort) => sort.value === 'bestselling')?.label).toBe('Najprodavanije');
     expect(parseShopQuery({ minPrice: '900', maxPrice: '100' })).toMatchObject({
       minPrice: 100,
       maxPrice: 900,

@@ -20,11 +20,13 @@ import { AdminMe } from '@zladovce/models';
 import { App } from './app';
 import { routes } from './app.routes';
 import { ADMIN_NAV } from './core/navigation';
+import { OrderSummaryStore } from './core/order-summary';
 
 const API = 'http://localhost:5080/api/v1';
 const ME_URL = `${API}/admin/me`;
 const HEALTH_URL = 'http://localhost:5080/health';
 const LOW_STOCK_URL = `${API}/admin/dashboard/low-stock`;
+const SUMMARY_URL = `${API}/admin/orders/summary`;
 const DEV: AuthConfig = { mode: 'dev', dev: { email: 'vlasnik@zladovce.local', role: 'Owner' } };
 const COGNITO: AuthConfig = {
   mode: 'cognito',
@@ -414,16 +416,98 @@ describe('shell and dashboard', () => {
     await settle(ctx.fixture);
     const links = [...ctx.root.querySelectorAll('mat-sidenav nav a')];
     expect(links.map(text)).toEqual(ADMIN_NAV.map((item) => item.label));
-    expect(links.map(text)).toEqual(['Kontrolna tabla', 'Proizvodi', 'Kategorije', 'Zalihe']);
+    expect(links.map(text)).toEqual([
+      'Kontrolna tabla',
+      'Porudžbine',
+      'Proizvodi',
+      'Kategorije',
+      'Zalihe',
+      'Kuriri',
+      'Podešavanja',
+    ]);
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/',
+      '/porudzbine',
       '/proizvodi',
       '/kategorije',
       '/zalihe',
+      '/kuriri',
+      '/podesavanja',
     ]);
     expect(links[0]?.getAttribute('aria-current')).toBe('page');
     expect(ctx.root.querySelector('a.skip-link')).not.toBeNull();
     expect(ctx.root.querySelector('main#sadrzaj')).not.toBeNull();
+  });
+
+  it('hides the owner-only entries from staff and keeps staff out of settings and couriers', async () => {
+    sessionStorage.setItem(DEV_SESSION_KEY, '1');
+    const staff: AuthConfig = {
+      mode: 'dev',
+      dev: { email: 'urednik@zladovce.local', role: 'Staff' },
+    };
+    const ctx = await start(staff, '/');
+    ctx.controller.expectOne(ME_URL).flush({ ...OWNER, role: 'Staff' });
+    await settle(ctx.fixture);
+    void ctx.router.navigateByUrl('/podesavanja');
+    await settle(ctx.fixture);
+    expect(ctx.router.url).toBe('/');
+    const labels = [...ctx.root.querySelectorAll('mat-sidenav nav a')].map(text);
+    expect(labels).toContain('Porudžbine');
+    expect(labels).not.toContain('Podešavanja');
+    expect(labels).not.toContain('Kuriri');
+    expect(ctx.controller.match(`${API}/admin/settings`).length).toBe(0);
+
+    void ctx.router.navigateByUrl('/kuriri');
+    await settle(ctx.fixture);
+    expect(ctx.router.url).toBe('/');
+  });
+
+  it('shows the number of new orders next to "Porudžbine" and on the dashboard', async () => {
+    const ctx = await openDashboard();
+    ctx.controller.expectOne(ME_URL).flush(OWNER);
+    await settle(ctx.fixture);
+    const counts = (received: number) => ({
+      counts: [
+        { status: 'Received', count: received },
+        { status: 'Accepted', count: 1 },
+        { status: 'Preparing', count: 2 },
+        { status: 'Shipped', count: 0 },
+        { status: 'Delivered', count: 7 },
+        { status: 'Cancelled', count: 1 },
+        { status: 'Rejected', count: 0 },
+        { status: 'DeliveryFailed', count: 1 },
+      ],
+      total: received + 12,
+    });
+    ctx.controller.expectOne(SUMMARY_URL).flush(counts(3));
+    await settle(ctx.fixture);
+    const badge = () => ctx.root.querySelector('mat-sidenav [data-testid="nav-badge"]');
+    expect(text(badge())).toBe('3 novih porudžbina');
+    expect(badge()?.closest('a')?.getAttribute('href')).toBe('/porudzbine');
+
+    // Dashboard card from the same summary.
+    const card = ctx.root.querySelector('[data-testid="orders-card"]');
+    expect(text(card?.querySelector('[data-testid="open-count"]'))).toBe('6');
+    expect(text(card)).toContain('porudžbina čeka na obradu');
+    expect(card?.querySelector('[data-status="Preparing"]')?.getAttribute('href')).toBe(
+      '/porudzbine?status=Preparing',
+    );
+    expect(card?.querySelector('[data-testid="orders-link"]')?.getAttribute('href')).toBe(
+      '/porudzbine',
+    );
+
+    const store = TestBed.inject(OrderSummaryStore);
+    store.refresh(true);
+    await settle(ctx.fixture);
+    ctx.controller.expectOne(SUMMARY_URL).flush(counts(1));
+    await settle(ctx.fixture);
+    expect(text(badge())).toBe('1 nova porudžbina');
+
+    store.refresh(true);
+    await settle(ctx.fixture);
+    ctx.controller.expectOne(SUMMARY_URL).flush(counts(0));
+    await settle(ctx.fixture);
+    expect(badge()).toBeNull();
   });
 
   it('has a route for every navigation entry', () => {

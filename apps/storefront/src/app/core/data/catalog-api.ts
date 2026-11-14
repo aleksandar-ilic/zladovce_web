@@ -94,6 +94,19 @@ export class CatalogApi {
       .pipe(map((response) => response.items));
   }
 
+  /**
+   * Best sellers (pieces sold in delivered orders of the last 90 days). Empty until orders have
+   * been delivered – the page then shows nothing instead of invented "best sellers".
+   */
+  bestsellers(limit = 4, options: FetchOptions = {}): Observable<PublicProductListItem[]> {
+    return this.api
+      .get<PublicProductList>('/catalog/bestsellers', {
+        ...cacheOption(options),
+        params: { limit },
+      })
+      .pipe(map((response) => response.items));
+  }
+
   /** Current price and availability of up to 100 variants; variants not on sale are missing. */
   availability(variantIds: readonly string[]): Observable<PublicAvailability> {
     return this.api.get<PublicAvailability>('/catalog/availability', {

@@ -48,6 +48,26 @@ describe('cart messages', () => {
       adjustmentMessage({ ...base, reason: 'quantityReduced', availableQuantity: 2 }, 'Sok, 1 l'),
     ).toBe('Količina proizvoda „Sok, 1 l“ je smanjena na 2 jer više nema na stanju.');
     expect(
+      adjustmentMessage(
+        { ...base, reason: 'quantityReduced', availableQuantity: 2, limitReason: 'stock' },
+        'Sok, 1 l',
+      ),
+    ).toBe('Količina proizvoda „Sok, 1 l“ je smanjena na 2 jer više nema na stanju.');
+    expect(
+      adjustmentMessage(
+        { ...base, reason: 'quantityReduced', availableQuantity: 20, limitReason: 'orderLimit' },
+        'Sok, 1 l',
+      ),
+    ).toBe(
+      'Količina proizvoda „Sok, 1 l“ je smanjena na 20 jer je najveća količina po porudžbini 20.',
+    );
+    expect(
+      adjustmentMessage(
+        { ...base, reason: 'quantityReduced', availableQuantity: 20, limitReason: 'orderLimit' },
+        null,
+      ),
+    ).toBe('Količina jednog proizvoda je smanjena na 20 jer je najveća količina po porudžbini 20.');
+    expect(
       nb(
         adjustmentMessage(
           {

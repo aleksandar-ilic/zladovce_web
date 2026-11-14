@@ -75,6 +75,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Place an order (cash on delivery). 201 new order; 200 replay of the same request with the same Idempotency-Key.
+         * @description Header `Idempotency-Key` (UUID) is required: generate it once when the checkout page opens and send the same key with every retry of that submission. Only a successful order uses up the key; after a 409/400 the same key may be sent again with the corrected cart. A request with a used key and the same content returns the original order (200, `trackingCode` null); with different content 409 IDEMPOTENCY_KEY_REUSED. Prices, shipping and totals are computed from the database with the rules of the cart quote; stock is deducted at once. `trackingCode` is always null until tracking codes are introduced (Phase 6). Errors: 400 VALIDATION_FAILED (field paths such as `customer.phone`, `address.postalCode`, `items[0].quantity`, `acceptedTerms`, `idempotencyKey`), BAD_REQUEST (malformed JSON); 409 with the fresh quote in `quote`: CART_CHANGED (a line unavailable or reduced, `knownUnitPrice` or `expectedTotal` differs; `errors` names the lines), INSUFFICIENT_STOCK (stock taken meanwhile; `errors["items[i].quantity"]`), MINIMUM_ORDER_NOT_MET, SHIPPING_DISABLED; 409 IDEMPOTENCY_KEY_REUSED; 429 RATE_LIMITED (5 per 10 minutes per IP, `Retry-After` header in seconds).
+         */
+        post: operations["CreateOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/categories": {
         parameters: {
             query?: never;
@@ -121,7 +141,7 @@ export interface paths {
         };
         /**
          * Product grid: visible products with the listing price (lowest variant price) and availability.
-         * @description Visible = active, not archived, in an active category, with at least one active variant. Sort `bestselling` is accepted and ordered like `newest` until order data exists. Errors: 400 VALIDATION_FAILED.
+         * @description Visible = active, not archived, in an active category, with at least one active variant. Sort `bestselling`: pieces sold in Delivered orders whose delivery is in the last 90 days (`Catalog:BestsellerWindowDays`), same metric as `/catalog/bestsellers`; products without such sales follow, newest first. Errors: 400 VALIDATION_FAILED.
          */
         get: operations["GetCatalogProducts"];
         put?: never;
@@ -164,6 +184,26 @@ export interface paths {
          * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND.
          */
         get: operations["GetCatalogRelatedProducts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/bestsellers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Best-selling visible products from real Delivered orders of the last 90 days. `limit` 1–24, default 8.
+         * @description Ordered by pieces sold (ties: newest product first). Only products that sold in that window are listed, so the list is empty until orders are delivered; nothing is invented. Errors: 400 VALIDATION_FAILED.
+         */
+        get: operations["GetCatalogBestsellers"];
         put?: never;
         post?: never;
         delete?: never;
@@ -614,10 +654,219 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Orders with search, status and date filters, sorting and paging.
+         * @description `q`: order number, customer name (ignores case and diacritics), email, phone. `status`: several values comma-separated and/or repeated. `from`/`to`: Serbian local dates (yyyy-MM-dd), inclusive. `sort`: newest (default), oldest, totalDesc, totalAsc. Errors: 400 VALIDATION_FAILED, BAD_REQUEST (malformed date).
+         */
+        get: operations["ListAdminOrders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/orders/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Number of orders per status (all eight, zero included), e.g. for the menu badge (Received). */
+        get: operations["GetAdminOrderSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Order detail: contact, address, items, totals, payment, timeline, notes, shipments and the allowed next statuses.
+         * @description Errors: 404 NOT_FOUND.
+         */
+        get: operations["GetAdminOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/orders/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move the order to the next status (P1.5). Returns the updated order.
+         * @description Allowed: Received → Accepted | Rejected | Cancelled; Accepted → Preparing | Cancelled; Preparing → Shipped | Cancelled; Shipped → Delivered | DeliveryFailed; DeliveryFailed → Shipped | Cancelled; Delivered, Cancelled, Rejected are final. Shipped requires `shipment` (active courier; tracking number, date (default now), note optional). Stock returns automatically on Rejected and on Cancelled before shipping; cancelling after DeliveryFailed requires `restock` (true = goods back on stock). History, shipment, stock movements and audit are one transaction. Errors: 400 VALIDATION_FAILED (`shipment`, `shipment.courierCompanyId`, `shipment.shippedAt`, `restock`); 404 NOT_FOUND; 409 INVALID_STATUS_TRANSITION (with `allowedNextStatuses`), CONCURRENT_EDIT (stale `version`).
+         */
+        post: operations["ChangeAdminOrderStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/orders/{id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add an internal note without changing the status. Returns the updated order (`notes`).
+         * @description Does not change `version`. Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND.
+         */
+        post: operations["AddAdminOrderNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/orders/{id}/shipments/{shipmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Correct a shipment: courier, tracking number, date, note. Returns the updated order.
+         * @description Every member must be sent. The courier must be active unless it is the shipment's current one. Does not change the order `version`. Errors: 400 VALIDATION_FAILED (`courierCompanyId`, `shippedAt`); 404 NOT_FOUND.
+         */
+        put: operations["UpdateAdminOrderShipment"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/orders/{id}/payment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Record the amount actually collected from the courier and when, or clear it (`collectedAmount` null).
+         * @description Delivered orders only. Errors: 400 VALIDATION_FAILED (`collectedAmount`, `collectedAt`); 404 NOT_FOUND; 409 ORDER_NOT_DELIVERED, CONCURRENT_EDIT.
+         */
+        put: operations["SetAdminOrderPayment"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/couriers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Courier companies by sort order and name. `activeOnly=true` for the shipment form; default lists all. */
+        get: operations["ListAdminCouriers"];
+        put?: never;
+        /**
+         * Add a courier company (Owner).
+         * @description Errors: 400 VALIDATION_FAILED (`name`, `trackingUrlTemplate`); 403 FORBIDDEN (Staff); 409 COURIER_NAME_TAKEN (`errors.name`).
+         */
+        post: operations["CreateAdminCourier"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/couriers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A courier company.
+         * @description Errors: 404 NOT_FOUND.
+         */
+        get: operations["GetAdminCourier"];
+        /**
+         * Change a courier company (Owner). Deactivate with `isActive: false`; couriers are never deleted.
+         * @description Errors: 400 VALIDATION_FAILED; 403 FORBIDDEN (Staff); 404 NOT_FOUND; 409 COURIER_NAME_TAKEN (`errors.name`).
+         */
+        put: operations["UpdateAdminCourier"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * All store settings (Owner).
+         * @description Errors: 403 FORBIDDEN (Staff).
+         */
+        get: operations["GetAdminSettings"];
+        /**
+         * Replace the store settings (Owner). Every member must be sent; `version` as last read.
+         * @description The logo is not changed here. Shipping changes apply to the next quote and order at once. Errors: 400 VALIDATION_FAILED; 403 FORBIDDEN (Staff); 409 CONCURRENT_EDIT.
+         */
+        put: operations["UpdateAdminSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AddOrderNoteRequest: {
+            note: null | string;
+        };
         AdjustStockRequest: {
             /** Format: int32 */
             quantityDelta: number;
@@ -645,12 +894,137 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        AdminCourierSummary: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            isActive: boolean;
+        };
         AdminMeResponse: {
             /** Format: uuid */
             id: string;
             email: string;
             fullName: string;
             role: components["schemas"]["AdminRole"];
+        };
+        AdminOrderAddress: {
+            city: string;
+            street: string;
+            postalCode: string;
+        };
+        AdminOrderContact: {
+            /** Format: uuid */
+            customerId: string;
+            firstName: string;
+            lastName: string;
+            email: string;
+            phone: string;
+        };
+        AdminOrderDetail: {
+            /** Format: uuid */
+            id: string;
+            orderNumber: string;
+            status: components["schemas"]["OrderStatus"];
+            /** Format: date-time */
+            placedAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: uint32 */
+            version: number;
+            customer: components["schemas"]["AdminOrderContact"];
+            shippingAddress: components["schemas"]["AdminOrderAddress"];
+            deliveryNote: null | string;
+            paymentMethod: components["schemas"]["PaymentMethod"];
+            items: components["schemas"]["AdminOrderItem"][];
+            /** Format: double */
+            subtotal: number;
+            /** Format: double */
+            shippingPrice: number;
+            /** Format: double */
+            total: number;
+            currency: string;
+            payment: components["schemas"]["AdminOrderPayment"];
+            timeline: components["schemas"]["AdminOrderTimelineEntry"][];
+            notes: components["schemas"]["AdminOrderNote"][];
+            shipments: components["schemas"]["AdminOrderShipment"][];
+            allowedNextStatuses: components["schemas"]["AllowedStatusTransition"][];
+        };
+        AdminOrderItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            variantId: string;
+            productName: string;
+            variantName: string;
+            sku: string;
+            /** Format: double */
+            unitPrice: number;
+            /** Format: int32 */
+            quantity: number;
+            /** Format: double */
+            lineTotal: number;
+        };
+        AdminOrderListItem: {
+            /** Format: uuid */
+            id: string;
+            orderNumber: string;
+            /** Format: date-time */
+            placedAt: string;
+            customerName: string;
+            city: string;
+            /** Format: int32 */
+            itemCount: number;
+            /** Format: int32 */
+            totalQuantity: number;
+            /** Format: double */
+            total: number;
+            status: components["schemas"]["OrderStatus"];
+            isPaymentCollected: boolean;
+        };
+        AdminOrderNote: {
+            /** Format: uuid */
+            id: string;
+            note: string;
+            /** Format: uuid */
+            adminUserId: string;
+            adminName: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AdminOrderPayment: {
+            /** Format: double */
+            collectedAmount: null | number;
+            /** Format: date-time */
+            collectedAt: null | string;
+            isCollected: boolean;
+            canRecord: boolean;
+        };
+        AdminOrderShipment: {
+            /** Format: uuid */
+            id: string;
+            courier: components["schemas"]["AdminCourierSummary"];
+            trackingNumber: null | string;
+            trackingUrl: null | string;
+            /** Format: date-time */
+            shippedAt: string;
+            note: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        AdminOrderTimelineEntry: {
+            /** Format: uuid */
+            id: string;
+            previousStatus: null | components["schemas"]["OrderStatus"];
+            newStatus: components["schemas"]["OrderStatus"];
+            /** Format: uuid */
+            changedByAdminId: null | string;
+            changedByAdminName: null | string;
+            internalNote: null | string;
+            customerMessage: null | string;
+            /** Format: date-time */
+            createdAt: string;
         };
         AdminProductCategory: {
             /** Format: uuid */
@@ -708,6 +1082,34 @@ export interface components {
         };
         /** @enum {unknown} */
         AdminRole: "Staff" | "Owner";
+        AdminStoreSettingsResponse: {
+            storeName: string;
+            logoKey: null | string;
+            contactEmail: null | string;
+            phone: null | string;
+            businessAddress: null | string;
+            shippingEnabled: boolean;
+            /** Format: double */
+            shippingPrice: number;
+            /** Format: double */
+            freeShippingThreshold: null | number;
+            /** Format: double */
+            minOrderAmount: null | number;
+            estimatedDeliveryText: null | string;
+            deliveryInfo: null | string;
+            facebookUrl: null | string;
+            instagramUrl: null | string;
+            otherLinks: components["schemas"]["StoreLinkDto"][];
+            defaultSeoTitle: null | string;
+            defaultSeoDescription: null | string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: uuid */
+            updatedByAdminId: null | string;
+            updatedByAdminName: null | string;
+            /** Format: uint32 */
+            version: number;
+        };
         AdminVariantResponse: {
             /** Format: uuid */
             id: string;
@@ -735,6 +1137,12 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        AllowedStatusTransition: {
+            status: components["schemas"]["OrderStatus"];
+            requiresShipment: boolean;
+            stockReturn: components["schemas"]["StockReturnPolicy"];
+            requiresRestockChoice: boolean;
+        };
         ApiProblem: {
             type: string;
             title: string;
@@ -745,6 +1153,8 @@ export interface components {
             errors?: null | {
                 [key: string]: string[];
             };
+            quote?: null | components["schemas"]["CartQuoteResponse"];
+            allowedNextStatuses?: null | components["schemas"]["OrderStatus"][];
             traceId?: null | string;
         };
         AttachProductImageRequest: {
@@ -765,6 +1175,7 @@ export interface components {
             previousUnitPrice: null | number;
             /** Format: double */
             unitPrice: null | number;
+            limitReason?: null | components["schemas"]["QuantityLimitReason"];
         };
         CartQuoteItemRequest: {
             /** Format: uuid */
@@ -841,6 +1252,59 @@ export interface components {
             width: number;
             /** Format: int32 */
             height: number;
+        };
+        ChangeOrderStatusRequest: {
+            newStatus: components["schemas"]["OrderStatus"];
+            /** Format: uint32 */
+            version: number;
+            internalNote?: null | string;
+            customerMessage?: null | string;
+            shipment?: null | components["schemas"]["NewShipmentRequest"];
+            restock?: null | boolean;
+        };
+        CheckoutAddressRequest: {
+            city?: null | string;
+            street?: null | string;
+            postalCode?: null | string;
+        };
+        CheckoutCustomerRequest: {
+            firstName?: null | string;
+            lastName?: null | string;
+            email?: null | string;
+            phone?: null | string;
+        };
+        CourierListResponse: {
+            items: components["schemas"]["CourierResponse"][];
+        };
+        CourierResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            trackingUrlTemplate: null | string;
+            isActive: boolean;
+            /** Format: int32 */
+            sortOrder: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateOrderItemRequest: {
+            /** Format: uuid */
+            variantId: string;
+            /** Format: int32 */
+            quantity: number;
+            /** Format: double */
+            knownUnitPrice?: null | number;
+        };
+        CreateOrderRequest: {
+            items: components["schemas"]["CreateOrderItemRequest"][];
+            customer: components["schemas"]["CheckoutCustomerRequest"];
+            address: components["schemas"]["CheckoutAddressRequest"];
+            deliveryNote?: null | string;
+            acceptedTerms: boolean;
+            /** Format: double */
+            expectedTotal?: null | number;
         };
         CreateProductRequest: {
             variants: components["schemas"]["CreateVariantRequest"][];
@@ -927,6 +1391,37 @@ export interface components {
         };
         /** @enum {unknown} */
         MeasurementUnit: "g" | "kg" | "ml" | "l" | "kom";
+        NewShipmentRequest: {
+            /** Format: uuid */
+            courierCompanyId?: null | string;
+            trackingNumber?: null | string;
+            /** Format: date-time */
+            shippedAt?: null | string;
+            note?: null | string;
+        };
+        /** @enum {unknown} */
+        OrderStatus: "Received" | "Accepted" | "Preparing" | "Shipped" | "Delivered" | "Cancelled" | "Rejected" | "DeliveryFailed";
+        OrderStatusCount: {
+            status: components["schemas"]["OrderStatus"];
+            /** Format: int32 */
+            count: number;
+        };
+        OrderSummaryResponse: {
+            counts: components["schemas"]["OrderStatusCount"][];
+            /** Format: int32 */
+            total: number;
+        };
+        PagedResultOfAdminOrderListItem: {
+            items: components["schemas"]["AdminOrderListItem"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalItems: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
         PagedResultOfAdminProductListItem: {
             items: components["schemas"]["AdminProductListItem"][];
             /** Format: int32 */
@@ -970,6 +1465,36 @@ export interface components {
             totalItems: number;
             /** Format: int32 */
             totalPages: number;
+        };
+        /** @enum {unknown} */
+        PaymentMethod: "CashOnDelivery";
+        PlacedOrderItem: {
+            /** Format: uuid */
+            variantId: string;
+            productName: string;
+            variantName: string;
+            sku: string;
+            /** Format: double */
+            unitPrice: number;
+            /** Format: int32 */
+            quantity: number;
+            /** Format: double */
+            lineTotal: number;
+        };
+        PlacedOrderResponse: {
+            orderNumber: string;
+            /** Format: date-time */
+            placedAt: string;
+            items: components["schemas"]["PlacedOrderItem"][];
+            /** Format: double */
+            subtotal: number;
+            /** Format: double */
+            shippingPrice: number;
+            /** Format: double */
+            total: number;
+            currency: string;
+            paymentMethod: components["schemas"]["PaymentMethod"];
+            trackingCode: null | string;
         };
         ProductImageResponse: {
             /** Format: uuid */
@@ -1139,6 +1664,8 @@ export interface components {
             /** Format: int32 */
             maxOrderQuantity: number;
         };
+        /** @enum {unknown} */
+        QuantityLimitReason: "stock" | "orderLimit" | null;
         ReorderCategoriesRequest: {
             ids: string[];
         };
@@ -1158,6 +1685,13 @@ export interface components {
             seoTitle: null | string;
             seoDescription: null | string;
         };
+        SaveCourierRequest: {
+            name: null | string;
+            trackingUrlTemplate: null | string;
+            isActive: boolean;
+            /** Format: int32 */
+            sortOrder: number;
+        };
         SeoRoute: {
             slug: string;
             /** Format: date-time */
@@ -1171,8 +1705,22 @@ export interface components {
             /** Format: int32 */
             lowStockThreshold: number;
         };
+        SetOrderPaymentRequest: {
+            /** Format: double */
+            collectedAmount: null | number;
+            /** Format: date-time */
+            collectedAt: null | string;
+            /** Format: uint32 */
+            version: number;
+        };
+        /** @enum {unknown} */
+        StockReturnPolicy: "None" | "Automatic" | "AdminChoice";
         /** @enum {unknown} */
         StockStatus: "ok" | "low" | "out";
+        StoreLinkDto: {
+            label: null | string;
+            url: null | string;
+        };
         UpdateProductImageRequest: {
             altText: null | string;
         };
@@ -1190,6 +1738,36 @@ export interface components {
             categoryId: string;
             name: string;
             sku: string;
+        };
+        UpdateShipmentRequest: {
+            /** Format: uuid */
+            courierCompanyId: string;
+            trackingNumber: null | string;
+            /** Format: date-time */
+            shippedAt: string;
+            note: null | string;
+        };
+        UpdateStoreSettingsRequest: {
+            /** Format: uint32 */
+            version: number;
+            storeName: null | string;
+            contactEmail: null | string;
+            phone: null | string;
+            businessAddress: null | string;
+            shippingEnabled: boolean;
+            /** Format: double */
+            shippingPrice: number;
+            /** Format: double */
+            freeShippingThreshold: null | number;
+            /** Format: double */
+            minOrderAmount: null | number;
+            estimatedDeliveryText: null | string;
+            deliveryInfo: null | string;
+            facebookUrl: null | string;
+            instagramUrl: null | string;
+            otherLinks: components["schemas"]["StoreLinkDto"][];
+            defaultSeoTitle: null | string;
+            defaultSeoDescription: null | string;
         };
         UploadUrlResponse: {
             uploadUrl: string;
@@ -1310,6 +1888,69 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SeoRoutesResponse"];
+                };
+            };
+        };
+    };
+    CreateOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description UUID generated by the browser once per checkout submission and repeated on every retry of it. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlacedOrderResponse"];
+                };
+            };
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlacedOrderResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
                 };
             };
         };
@@ -1468,6 +2109,37 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetCatalogBestsellers: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicProductListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3059,6 +3731,733 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListAdminOrders: {
+        parameters: {
+            query?: {
+                q?: string;
+                status?: string[];
+                from?: string;
+                to?: string;
+                sort?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagedResultOfAdminOrderListItem"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetAdminOrderSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderSummaryResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetAdminOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminOrderDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ChangeAdminOrderStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeOrderStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminOrderDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    AddAdminOrderNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddOrderNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminOrderDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    UpdateAdminOrderShipment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                shipmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateShipmentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminOrderDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    SetAdminOrderPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetOrderPaymentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminOrderDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListAdminCouriers: {
+        parameters: {
+            query?: {
+                activeOnly?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourierListResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    CreateAdminCourier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveCourierRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourierResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetAdminCourier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourierResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    UpdateAdminCourier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveCourierRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourierResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetAdminSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminStoreSettingsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    UpdateAdminSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateStoreSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminStoreSettingsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
