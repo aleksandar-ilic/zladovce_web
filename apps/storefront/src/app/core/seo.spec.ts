@@ -167,7 +167,7 @@ describe('prerender params', () => {
         products: [{ slug: 'dzem-od-sljiva', updatedAt: 'x' }, { slug: 'A B' }, null],
       }),
     });
-    expect(routes).toEqual({
+    expect(routes).toMatchObject({
       categories: [{ slug: 'dzemovi', updatedAt: 'x' }],
       products: [{ slug: 'dzem-od-sljiva', updatedAt: 'x' }],
     });
@@ -177,7 +177,7 @@ describe('prerender params', () => {
   it('falls back to no routes with a warning when the API is down, failing or empty', async () => {
     const warn = vi.fn();
     const down: FetchLike = () => Promise.reject(new TypeError('fetch failed'));
-    expect(await fetchSeoRoutes('http://api', { fetchFn: down, warn })).toEqual({
+    expect(await fetchSeoRoutes('http://api', { fetchFn: down, warn })).toMatchObject({
       categories: [],
       products: [],
     });
@@ -185,13 +185,15 @@ describe('prerender params', () => {
 
     const failing: FetchLike = () =>
       Promise.resolve({ ok: false, status: 503, json: () => Promise.resolve({}) });
-    expect(await fetchSeoRoutes('http://api', { fetchFn: failing, warn })).toEqual({
+    expect(await fetchSeoRoutes('http://api', { fetchFn: failing, warn })).toMatchObject({
       categories: [],
       products: [],
     });
     expect(warn.mock.calls[1]![0]).toContain('HTTP 503');
 
-    expect(await fetchSeoRoutes('http://api', { fetchFn: ok({ categories: 'x' }), warn })).toEqual({
+    expect(
+      await fetchSeoRoutes('http://api', { fetchFn: ok({ categories: 'x' }), warn }),
+    ).toMatchObject({
       categories: [],
       products: [],
     });

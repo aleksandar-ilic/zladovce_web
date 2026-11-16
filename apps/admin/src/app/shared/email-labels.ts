@@ -8,6 +8,8 @@ export const EMAIL_TEMPLATE_LABELS: Record<EmailTemplate, string> = {
   OrderShipped: 'Porudžbina poslata',
   OrderDelivered: 'Porudžbina isporučena',
   OrderCancelled: 'Porudžbina otkazana',
+  NewsletterConfirm: 'Potvrda prijave na newsletter',
+  ContactMessage: 'Poruka sa kontakt forme',
 };
 
 export const EMAIL_STATUS_LABELS: Record<EmailOutboxStatus, string> = {

@@ -11,7 +11,10 @@ import { ApiError, asApiError } from '@zladovce/api';
 import { AdminStoreSettings } from '@zladovce/models';
 import { UiErrorState, UiLoadingState, validationMessage } from '@zladovce/ui';
 import { SrDatePipe } from '@zladovce/utilities';
+import { retryWhileImageNotReady, uploadErrorMessage } from '../../data/media-upload';
 import { SettingsApi } from '../../data/settings-api';
+import { ImageUpload, UploadedImage } from '../../shared/image-upload';
+import { imageSrc } from '../../shared/images';
 import { applyServerErrors } from '../../shared/server-errors';
 import { HasUnsavedChanges, warnBeforeUnload } from '../../shared/unsaved-changes';
 import {
@@ -44,6 +47,7 @@ type LoadState =
     SrDatePipe,
     UiErrorState,
     UiLoadingState,
+    ImageUpload,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(window:beforeunload)': 'beforeUnload($event)' },
@@ -107,10 +111,52 @@ type LoadState =
                 <mat-error>{{ message(e, { required: 'Upišite naziv prodavnice.' }) }}</mat-error>
               }
             </mat-form-field>
-            <p class="text-sm text-ink-700">
-              Logo: {{ logoKey() ? 'postavljen' : 'nije postavljen' }}. Logo se za sada ne menja na
-              ovoj strani.
+            <h3 class="mt-2 text-base font-semibold">Logo</h3>
+            <p class="mt-1 text-sm text-ink-700">
+              Prikazuje se u zaglavlju sajta i u e-porukama kupcima. Najbolje izgleda logo na
+              providnoj ili beloj pozadini (PNG). Bez loga se prikazuje naziv prodavnice.
             </p>
+            @if (logoPreview(); as preview) {
+              <div class="mt-3 flex flex-wrap items-end gap-4" data-testid="logo">
+                <img
+                  [src]="preview"
+                  alt="Logo prodavnice"
+                  class="max-h-24 max-w-64 rounded-md border border-cream-200 bg-white object-contain p-2"
+                  data-testid="logo-preview"
+                />
+                <button
+                  matButton
+                  type="button"
+                  class="danger-button"
+                  data-testid="remove-logo"
+                  (click)="removeLogo()"
+                >
+                  Ukloni logo
+                </button>
+              </div>
+              @if (form.controls.logoKey.dirty) {
+                <p class="mt-2 text-sm text-warning-700" data-testid="logo-pending">
+                  Novi logo će se prikazati kada sačuvate podešavanja.
+                </p>
+              }
+            } @else {
+              <p class="mt-2 text-sm text-ink-700" data-testid="no-logo">
+                {{
+                  form.controls.logoKey.dirty
+                    ? 'Logo će biti uklonjen kada sačuvate podešavanja.'
+                    : 'Logo nije postavljen.'
+                }}
+              </p>
+            }
+            @if (form.controls.logoKey.errors?.['server']; as serverError) {
+              <p class="mt-2 text-sm font-medium text-danger-700" role="alert">{{ serverError }}</p>
+            }
+            <adm-image-upload
+              class="mt-3"
+              purpose="logo"
+              (uploaded)="logoUploaded($event)"
+              (busyChange)="uploading.set($event)"
+            />
           </section>
 
           <section
@@ -415,7 +461,7 @@ type LoadState =
               type="submit"
               class="min-h-12"
               data-testid="save"
-              [disabled]="saving() || conflict()"
+              [disabled]="saving() || conflict() || uploading()"
             >
               {{ saving() ? 'Čuvanje…' : 'Sačuvaj podešavanja' }}
             </button>
@@ -446,12 +492,15 @@ export class SettingsPage implements HasUnsavedChanges {
   readonly conflict = signal(false);
   readonly saving = signal(false);
   readonly saveError = signal<string | null>(null);
-  protected readonly logoKey = signal<string | null>(null);
+  protected readonly logoPreview = signal<string | null>(null);
+  protected readonly uploading = signal(false);
+  private localPreview: string | null = null;
   protected readonly updatedAt = signal<string | null>(null);
   protected readonly updatedBy = signal<string | null>(null);
 
   constructor() {
     this.reload();
+    inject(DestroyRef).onDestroy(() => this.revokePreview());
   }
 
   hasUnsavedChanges(): boolean {
@@ -492,6 +541,29 @@ export class SettingsPage implements HasUnsavedChanges {
       });
   }
 
+  protected logoUploaded(upload: UploadedImage): void {
+    this.revokePreview();
+    this.localPreview =
+      typeof URL.createObjectURL === 'function' ? URL.createObjectURL(upload.file) : null;
+    this.logoPreview.set(this.localPreview);
+    this.form.controls.logoKey.setValue(upload.key);
+    this.form.controls.logoKey.markAsDirty();
+  }
+
+  removeLogo(): void {
+    this.revokePreview();
+    this.logoPreview.set(null);
+    this.form.controls.logoKey.setValue(null);
+    this.form.controls.logoKey.markAsDirty();
+  }
+
+  private revokePreview(): void {
+    if (this.localPreview && typeof URL.revokeObjectURL === 'function') {
+      URL.revokeObjectURL(this.localPreview);
+    }
+    this.localPreview = null;
+  }
+
   protected sync(which: 'freeShippingThreshold' | 'minOrderAmount'): void {
     syncThreshold(this.form, which);
   }
@@ -526,7 +598,7 @@ export class SettingsPage implements HasUnsavedChanges {
     this.saving.set(true);
     this.api
       .update(settingsRequest(this.form, version))
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(retryWhileImageNotReady(), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (settings) => {
           this.saving.set(false);
@@ -539,6 +611,9 @@ export class SettingsPage implements HasUnsavedChanges {
           if (apiError.code === 'CONCURRENT_EDIT') {
             this.conflict.set(true);
             return;
+          }
+          if (['IMAGE_NOT_READY', 'INVALID_IMAGE', 'UPLOAD_NOT_FOUND'].includes(apiError.code)) {
+            this.form.controls.logoKey.setErrors({ server: uploadErrorMessage(apiError) });
           }
           const unmatched = applyServerErrors(this.form, apiError);
           this.saveError.set(
@@ -555,7 +630,8 @@ export class SettingsPage implements HasUnsavedChanges {
   private apply(settings: AdminStoreSettings): void {
     fillSettingsForm(this.form, this.fb, settings);
     this.version.set(settings.version);
-    this.logoKey.set(settings.logoKey);
+    this.revokePreview();
+    this.logoPreview.set(settings.logo ? imageSrc(settings.logo, 400) : null);
     this.updatedAt.set(settings.updatedAt);
     this.updatedBy.set(settings.updatedByAdminName);
   }

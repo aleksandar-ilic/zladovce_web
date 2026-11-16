@@ -104,6 +104,93 @@ export const routes: Routes = [
           import('./features/settings/settings.page').then((m) => m.SettingsPage),
       },
       {
+        path: 'izvestaji',
+        title: 'Izveštaji – Zladovce administracija',
+        loadComponent: () => import('./features/reports/reports.page').then((m) => m.ReportsPage),
+      },
+      {
+        path: 'troskovi',
+        title: 'Troškovi – Zladovce administracija',
+        canActivate: [roleGuard('Owner')],
+        loadComponent: () =>
+          import('./features/expenses/expenses.page').then((m) => m.ExpensesPage),
+      },
+      {
+        path: 'poruke',
+        title: 'Poruke kupaca – Zladovce administracija',
+        loadComponent: () =>
+          import('./features/messages/contact-messages.page').then((m) => m.ContactMessagesPage),
+      },
+      {
+        path: 'blog',
+        title: 'Blog – Zladovce administracija',
+        loadComponent: () => import('./features/blog/blog-posts.page').then((m) => m.BlogPostsPage),
+      },
+      {
+        path: 'blog/kategorije',
+        title: 'Kategorije bloga – Zladovce administracija',
+        loadComponent: () =>
+          import('./features/blog/blog-categories.page').then((m) => m.BlogCategoriesPage),
+      },
+      {
+        path: 'blog/nova',
+        title: 'Nova objava – Zladovce administracija',
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: () =>
+          import('./features/blog/blog-post-form.page').then((m) => m.BlogPostFormPage),
+      },
+      {
+        path: 'blog/:id',
+        title: 'Izmena objave – Zladovce administracija',
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: () =>
+          import('./features/blog/blog-post-form.page').then((m) => m.BlogPostFormPage),
+      },
+      {
+        path: 'sadrzaj',
+        title: 'Sadržaj sajta – Zladovce administracija',
+        loadComponent: () =>
+          import('./features/content/cms-pages.page').then((m) => m.CmsPagesPage),
+      },
+      {
+        path: 'sadrzaj/stranice/:key',
+        title: 'Izmena stranice – Zladovce administracija',
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: () =>
+          import('./features/content/cms-page-form.page').then((m) => m.CmsPageFormPage),
+      },
+      {
+        path: 'sadrzaj/pitanja',
+        title: 'Česta pitanja – Zladovce administracija',
+        loadComponent: () => import('./features/content/faq.page').then((m) => m.FaqPage),
+      },
+      {
+        path: 'sadrzaj/utisci',
+        title: 'Utisci kupaca – Zladovce administracija',
+        loadComponent: () =>
+          import('./features/content/testimonials.page').then((m) => m.TestimonialsPage),
+      },
+      {
+        path: 'newsletter',
+        title: 'Newsletter – Zladovce administracija',
+        canActivate: [roleGuard('Owner')],
+        loadComponent: () =>
+          import('./features/newsletter/newsletter.page').then((m) => m.NewsletterPage),
+      },
+      {
+        path: 'administratori',
+        title: 'Administratori – Zladovce administracija',
+        canActivate: [roleGuard('Owner')],
+        loadComponent: () =>
+          import('./features/admin-users/admin-users.page').then((m) => m.AdminUsersPage),
+      },
+      {
+        path: 'dnevnik-izmena',
+        title: 'Dnevnik izmena – Zladovce administracija',
+        canActivate: [roleGuard('Owner')],
+        loadComponent: () => import('./features/audit/audit-log.page').then((m) => m.AuditLogPage),
+      },
+      {
         path: '**',
         title: 'Stranica nije pronađena – Zladovce administracija',
         loadComponent: () =>

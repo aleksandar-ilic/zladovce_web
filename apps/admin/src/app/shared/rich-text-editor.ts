@@ -2,16 +2,18 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   ElementRef,
   forwardRef,
   input,
+  output,
   signal,
   viewChild,
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { normalizeHref, sanitizeRichText } from './rich-text';
+import { normalizeHref, richTextImage, sanitizeRichText } from './rich-text';
 
 interface ToolbarAction {
   id: string;
@@ -77,12 +79,36 @@ const ACTIONS: readonly ToolbarAction[] = [
     state: 'insertOrderedList',
     run: (e) => e.exec('insertOrderedList'),
   },
+  {
+    id: 'quote',
+    label: 'Citat (istaknut pasus)',
+    text: '„Citat“',
+    block: 'blockquote',
+    run: (e) => e.exec('formatBlock', '<blockquote>'),
+  },
   { id: 'link', label: 'Dodaj vezu (link)', text: 'Veza', run: (e) => e.openLink() },
   { id: 'unlink', label: 'Ukloni vezu', text: 'Ukloni vezu', run: (e) => e.exec('unlink') },
 ];
 
+/** Shown only when the editor allows images (blog posts, CMS pages). */
+const IMAGE_ACTION: ToolbarAction = {
+  id: 'image',
+  label: 'Dodaj fotografiju',
+  text: 'Fotografija',
+  run: (e) => e.requestImage(),
+};
+
+export interface InsertedImage {
+  src: string;
+  alt: string;
+  width?: number;
+  height?: number;
+}
+
 /**
- * Small rich-text editor for product descriptions: bold, italic, headings, lists and links.
+ * Small rich-text editor (product descriptions, blog posts, CMS pages): bold, italic, headings,
+ * lists, quotes and links; with `[images]="true"` also photos from the shop's media storage
+ * (the toolbar asks the parent through `imageRequested`, the parent calls `insertImage`).
  * Built on `contenteditable`; every change is cleaned by `sanitizeRichText`, so the value is always
  * the HTML subset the API keeps. Works as a form control (`formControlName`).
  */
@@ -105,7 +131,7 @@ const ACTIONS: readonly ToolbarAction[] = [
         role="toolbar"
         [attr.aria-label]="'Oblikovanje teksta: ' + label()"
       >
-        @for (action of actions; track action.id) {
+        @for (action of actions(); track action.id) {
           <button
             type="button"
             class="min-h-9 min-w-9 cursor-pointer rounded-sm px-2.5 text-sm text-ink-900 hover:bg-cream-200 focus-visible:outline-2 focus-visible:outline-olive-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -170,7 +196,14 @@ export class RichTextEditor implements ControlValueAccessor {
   readonly invalid = input(false);
   readonly describedBy = input<string>('');
 
-  protected readonly actions = ACTIONS;
+  /** Allow photos (blog, CMS pages); product descriptions have none. */
+  readonly images = input(false);
+  /** The "Fotografija" button was pressed; answer with `insertImage`. */
+  readonly imageRequested = output<void>();
+
+  protected readonly actions = computed(() =>
+    this.images() ? [...ACTIONS, IMAGE_ACTION] : ACTIONS,
+  );
   protected readonly disabled = signal(false);
   protected readonly active = signal<string[]>([]);
   protected readonly linkOpen = signal(false);
@@ -193,7 +226,7 @@ export class RichTextEditor implements ControlValueAccessor {
   }
 
   writeValue(value: string | null): void {
-    this.value = sanitizeRichText(value);
+    this.value = sanitizeRichText(value, { images: this.images() });
     if (this.viewReady) {
       this.render();
     }
@@ -263,6 +296,44 @@ export class RichTextEditor implements ControlValueAccessor {
     this.exec('createLink', href);
   }
 
+  /** Remembers where the photo goes and asks the parent for it. */
+  requestImage(): void {
+    this.savedRange = this.currentRange();
+    this.imageRequested.emit();
+  }
+
+  /**
+   * Inserts a photo as its own paragraph after the block where the cursor was (or at the end),
+   * then publishes the cleaned value.
+   */
+  insertImage(image: InsertedImage): void {
+    const area = this.area().nativeElement;
+    const doc = area.ownerDocument;
+    const paragraph = doc.createElement('p');
+    paragraph.appendChild(richTextImage(doc, image));
+    let block: Node | null = this.savedRange?.endContainer ?? null;
+    while (block && block.parentNode !== area) {
+      block = block.parentNode;
+    }
+    if (block && block.parentNode === area) {
+      area.insertBefore(paragraph, block.nextSibling);
+    } else {
+      area.appendChild(paragraph);
+    }
+    this.savedRange = null;
+    this.onInput();
+    this.render();
+  }
+
+  private currentRange(): Range | null {
+    const selection = document.getSelection();
+    return selection &&
+      selection.rangeCount > 0 &&
+      this.area().nativeElement.contains(selection.anchorNode)
+      ? selection.getRangeAt(0).cloneRange()
+      : null;
+  }
+
   protected closeLink(): void {
     this.linkOpen.set(false);
     this.linkError.set('');
@@ -270,7 +341,7 @@ export class RichTextEditor implements ControlValueAccessor {
 
   protected onInput(): void {
     const element = this.area().nativeElement;
-    const clean = sanitizeRichText(element.innerHTML);
+    const clean = sanitizeRichText(element.innerHTML, { images: this.images() });
     if (clean !== this.value) {
       this.value = clean;
       this.onChange(clean);
@@ -291,7 +362,7 @@ export class RichTextEditor implements ControlValueAccessor {
     event.preventDefault();
     const html = data.getData('text/html');
     if (html) {
-      document.execCommand('insertHTML', false, sanitizeRichText(html));
+      document.execCommand('insertHTML', false, sanitizeRichText(html, { images: this.images() }));
     } else {
       document.execCommand('insertText', false, data.getData('text/plain'));
     }

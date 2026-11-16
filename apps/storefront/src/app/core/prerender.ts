@@ -2,7 +2,13 @@ import { SeoRoute, SeoRoutes } from '@zladovce/models';
 
 /** Slugs are used as file paths of the prerendered output, so only clean slugs are accepted. */
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const EMPTY: SeoRoutes = { categories: [], products: [] };
+const EMPTY: SeoRoutes = {
+  categories: [],
+  products: [],
+  blogPosts: [],
+  blogCategories: [],
+  pages: [],
+};
 
 export type FetchLike = (
   url: string,
@@ -56,6 +62,10 @@ export async function fetchSeoRoutes(
     const routes: SeoRoutes = {
       categories: cleanRoutes(body?.categories),
       products: cleanRoutes(body?.products),
+      // Phase 7 routes are read by the storefront blog/CMS pages (not prerendered yet).
+      blogPosts: [],
+      blogCategories: [],
+      pages: [],
     };
     if (routes.products.length === 0) {
       warn(`[prerender] ${url} returned no products; product pages are not prerendered.`);

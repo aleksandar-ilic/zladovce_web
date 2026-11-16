@@ -85,6 +85,36 @@ export function instantForSerbianDate(
   return new Date(Math.min(instant, now)).toISOString();
 }
 
+/**
+ * The instant of a Serbian local date and time (`2026-11-20`, `08:30`), e.g. when a blog post
+ * should appear. Null for an unreadable date or time.
+ */
+export function belgradeInstant(day: string, time: string): string | null {
+  const date = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  const clock = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
+  if (!date || !clock || Number(clock[1]) > 23 || Number(clock[2]) > 59) {
+    return null;
+  }
+  const guess = Date.UTC(
+    Number(date[1]),
+    Number(date[2]) - 1,
+    Number(date[3]),
+    Number(clock[1]),
+    Number(clock[2]),
+  );
+  // Two passes: the offset can differ on either side of a daylight-saving change.
+  let instant = guess - belgradeOffset(guess);
+  instant = guess - belgradeOffset(instant);
+  return new Date(instant).toISOString();
+}
+
+/** `HH:mm` of an instant in Serbian local time. */
+export function belgradeTime(instant: string | number | Date = Date.now()): string {
+  const ms = instant instanceof Date ? instant.getTime() : new Date(instant).getTime();
+  const p = partsAt(ms);
+  return `${pad(p['hour'] ?? 0)}:${pad(p['minute'] ?? 0)}`;
+}
+
 export const SERBIAN_DATE_FORMATS: MatDateFormats = {
   parse: { dateInput: null },
   display: {

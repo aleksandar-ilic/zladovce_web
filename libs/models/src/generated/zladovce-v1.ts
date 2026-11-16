@@ -63,8 +63,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Slugs and last-modified times of the visible categories and products, for prerendering and the sitemap.
-         * @description Same visibility as the public catalog. Blog posts are added in a later phase as a new member.
+         * Slugs and last-modified times of everything the storefront prerenders: categories, products, blog posts, blog categories, CMS pages with content.
+         * @description Same visibility as the public catalog and the public blog (drafts, scheduled and archived posts are never listed). `pages` lists CMS keys that have content.
          */
         get: operations["GetSeoRoutes"];
         put?: never;
@@ -109,6 +109,26 @@ export interface paths {
          * @description Body `{ "code": "…" }`. The code has 26 Crockford Base32 characters, shown as `XXXXX-XXXXX-XXXXX-XXXXX-XXXXXX`; hyphens and spaces are optional, case is ignored, `O` counts as `0` and `I`/`L` as `1`. The page takes it from the email link `/track-order#kod=<code>` (URL fragment) and sends it here in the body — never in a URL. The response has no name, address, phone, email, items or internal notes. Errors: 404 TRACKING_NOT_FOUND — the same body for unknown, revoked and malformed codes; 400 VALIDATION_FAILED only when `code` is missing from the body; 429 RATE_LIMITED (10 per 10 minutes per IP, plus a global cap; `Retry-After` in seconds).
          */
         post: operations["LookupTracking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Contact form: stores the message and emails it to the store contact address (Reply-To = the sender).
+         * @description Body `{ name, email, message, website }` (`website` = hidden honeypot; when filled the answer is the same 202 and nothing is stored). Errors: 400 VALIDATION_FAILED (`name`, `email`, `message`); 409 CONTACT_NOT_CONFIGURED (the store has no contact email: show the phone/address instead); 429 RATE_LIMITED (3 per 10 minutes per IP).
+         */
+        post: operations["SendContactMessage"];
         delete?: never;
         options?: never;
         head?: never;
@@ -272,6 +292,259 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/blog/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Blog categories by sort order, with the number of public posts (0 included). */
+        get: operations["ListBlogCategories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/blog/posts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public posts (Published, publication time reached, not archived), newest first.
+         * @description `category`: blog category slug (unknown → 404). Paging `page`, `pageSize`. Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND.
+         */
+        get: operations["ListBlogPosts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/blog/posts/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One public post with its sanitised HTML content.
+         * @description Drafts, scheduled posts before their time and archived posts answer 404 NOT_FOUND.
+         */
+        get: operations["GetBlogPost"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/blog/latest-posts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Newest public posts for the homepage previews (`limit` 1–12, default 3). Empty when there are none. */
+        get: operations["ListLatestBlogPosts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/content/pages/home": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Homepage texts (hero, intro, family story, why us, quality). 404 while the owner has not written them. */
+        get: operations["GetHomePage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/content/pages/about": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** O nama: sanitised HTML and images. 404 while empty. */
+        get: operations["GetAboutPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/content/pages/privacy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Page `privacy`: title and sanitised HTML. 404 while empty (legal texts are never invented). */
+        get: operations["GetPrivacyPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/content/pages/terms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Page `terms`: title and sanitised HTML. 404 while empty (legal texts are never invented). */
+        get: operations["GetTermsPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/content/pages/delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Page `delivery`: title and sanitised HTML. 404 while empty (legal texts are never invented). */
+        get: operations["GetDeliveryPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/content/faq": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Published FAQ items in the owner's order (answers are plain text). */
+        get: operations["ListFaq"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/content/testimonials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Published real testimonials. Empty unless the owner entered some: then hide the homepage section (A13). */
+        get: operations["ListTestimonials"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/newsletter/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign up for the newsletter (double opt-in). Always 202 with the same message.
+         * @description Body `{ email, consent: true, website }` (`website` is a hidden honeypot: leave it empty; when filled nothing happens). New and unsubscribed addresses get a confirmation email (`NewsletterConfirm`) with links `{shop}/newsletter/potvrda#token=…` and `{shop}/newsletter/odjava#token=…`; pending addresses get it again at most every 30 minutes; confirmed ones nothing. The response never tells which happened. Errors: 400 VALIDATION_FAILED (`email`, `consent`); 429 RATE_LIMITED (3 per 10 minutes per IP, `Retry-After`).
+         */
+        post: operations["SubscribeNewsletter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/newsletter/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm the address with the token from the confirmation link (fragment `#token=`). Repeating it is fine.
+         * @description Errors: 400 NEWSLETTER_TOKEN_INVALID (malformed, forged, older than 7 days, superseded by a newer link, or unsubscribed); 400 VALIDATION_FAILED; 429 RATE_LIMITED.
+         */
+        post: operations["ConfirmNewsletter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/newsletter/unsubscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * One-click unsubscribe with the token from any newsletter email (`#token=` of the odjava link). Idempotent.
+         * @description Errors: 400 NEWSLETTER_TOKEN_INVALID; 400 VALIDATION_FAILED; 429 RATE_LIMITED.
+         */
+        post: operations["UnsubscribeNewsletter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/me": {
         parameters: {
             query?: never;
@@ -323,6 +596,26 @@ export interface paths {
         get: operations["GetDashboardLowStock"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/blog/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Process an uploaded image (purpose `blog`) for use inside post content; returns its renditions.
+         * @description Insert it as `<img src="{baseUrl}/800.webp" alt="…">` (any listed width); only images of this shop's media survive sanitising. Errors: 400 VALIDATION_FAILED (`uploadKey`), INVALID_IMAGE, UPLOAD_NOT_FOUND; 409 IMAGE_NOT_READY.
+         */
+        post: operations["AddAdminBlogImage"];
         delete?: never;
         options?: never;
         head?: never;
@@ -870,7 +1163,7 @@ export interface paths {
         get: operations["GetAdminSettings"];
         /**
          * Replace the store settings (Owner). Every member must be sent; `version` as last read.
-         * @description The logo is not changed here. Shipping changes apply to the next quote and order at once. Errors: 400 VALIDATION_FAILED; 403 FORBIDDEN (Staff); 409 CONCURRENT_EDIT.
+         * @description `logoKey`: the current key keeps the logo, null removes it, an upload key (purpose `logo`) replaces it (renditions and an email PNG are made; the old files are deleted after the save). Shipping changes apply to the next quote and order at once. Errors: 400 VALIDATION_FAILED, INVALID_IMAGE, UPLOAD_NOT_FOUND; 403 FORBIDDEN (Staff); 409 CONCURRENT_EDIT, IMAGE_NOT_READY.
          */
         put: operations["UpdateAdminSettings"];
         post?: never;
@@ -980,10 +1273,794 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/dashboard/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * P1.8 numbers of the period and of the previous comparable period, plus the current order queues.
+         * @description `period`: today, yesterday, last7, last30 (default), thisMonth, lastMonth, thisYear, custom (`from`, `to` as yyyy-MM-dd, inclusive, at most 3 years). Days are Europe/Belgrade calendar days (23/25-hour days on DST changes). orderedValue: totals of orders placed in the period, current status not Rejected/Cancelled; deliveredValue: totals of orders whose Delivered transition is in the period; estimatedCollected = deliveredValue; actualCollected: collected amounts by collection date; expenses: expenses dated in the period; estimatedProfit = deliveredValue − expenses; averageOrderValue = orderedValue / orderedCount (null without orders); cancelledCount / rejectedCount: transitions in the period. `previous`: same numbers for the previous period (same length before it; thisMonth → the previous month up to the same day; lastMonth → the month before; thisYear → the previous year up to the same day). `queues` are current counts independent of the period: awaitingConfirmation (Received), accepted (Accepted, "Prihvaćene"), preparing (Preparing, "U pripremi"), inPreparation (Accepted + Preparing), awaitingShipment (Preparing), deliveryFailed. Errors: 400 VALIDATION_FAILED.
+         */
+        get: operations["GetDashboardSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dashboard/revenue-series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ordered and delivered value per day (per month for thisYear and ranges over 92 days), zero-filled.
+         * @description `period`: today, yesterday, last7, last30 (default), thisMonth, lastMonth, thisYear, custom (`from`, `to` as yyyy-MM-dd, inclusive, at most 3 years). Days are Europe/Belgrade calendar days (23/25-hour days on DST changes). Errors: 400 VALIDATION_FAILED.
+         */
+        get: operations["GetDashboardRevenueSeries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dashboard/order-series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Orders placed per bucket: orderCount (without Rejected/Cancelled) and placedCount (all).
+         * @description `period`: today, yesterday, last7, last30 (default), thisMonth, lastMonth, thisYear, custom (`from`, `to` as yyyy-MM-dd, inclusive, at most 3 years). Days are Europe/Belgrade calendar days (23/25-hour days on DST changes). Errors: 400 VALIDATION_FAILED.
+         */
+        get: operations["GetDashboardOrderSeries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dashboard/top-products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Best-selling products of orders delivered in the period: by pieces and by revenue (line totals, no shipping).
+         * @description `period`: today, yesterday, last7, last30 (default), thisMonth, lastMonth, thisYear, custom (`from`, `to` as yyyy-MM-dd, inclusive, at most 3 years). Days are Europe/Belgrade calendar days (23/25-hour days on DST changes). `limit` 1–50 (default 5). Names are the order-item snapshots. Errors: 400 VALIDATION_FAILED.
+         */
+        get: operations["GetDashboardTopProducts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dashboard/sales-by-category": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Revenue and pieces of orders delivered in the period by the product's current category.
+         * @description `period`: today, yesterday, last7, last30 (default), thisMonth, lastMonth, thisYear, custom (`from`, `to` as yyyy-MM-dd, inclusive, at most 3 years). Days are Europe/Belgrade calendar days (23/25-hour days on DST changes). A product whose category is archived counts under "Bez kategorije" (categoryId null). Errors: 400 VALIDATION_FAILED.
+         */
+        get: operations["GetDashboardSalesByCategory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dashboard/status-distribution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current status of the orders placed in the period (all eight statuses, with Serbian labels).
+         * @description `period`: today, yesterday, last7, last30 (default), thisMonth, lastMonth, thisYear, custom (`from`, `to` as yyyy-MM-dd, inclusive, at most 3 years). Days are Europe/Belgrade calendar days (23/25-hour days on DST changes). Errors: 400 VALIDATION_FAILED.
+         */
+        get: operations["GetDashboardStatusDistribution"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reports/sales": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sales of orders delivered in the period by product variant and by category. `format=csv` downloads a file.
+         * @description `period`: today, yesterday, last7, last30 (default), thisMonth, lastMonth, thisYear, custom (`from`, `to` as yyyy-MM-dd, inclusive, at most 3 years). Days are Europe/Belgrade calendar days (23/25-hour days on DST changes). CSV (`format=csv`, `groupBy=variant|category`): UTF-8 with BOM, `;` separator, decimal comma, CRLF, RFC 4180 quoting, text cells starting with = + - @ get a leading apostrophe; `Content-Type: text/csv; charset=utf-8`, `Content-Disposition: attachment`. The documented 200 schema is the JSON shape; with `format=csv` the body is the CSV file. Errors: 400 VALIDATION_FAILED.
+         */
+        get: operations["GetSalesReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reports/inventory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current stock of every variant that is not archived: threshold, status and value at the current regular price.
+         * @description `format=csv` downloads the same rows as CSV (format as in the sales report). Errors: 400 VALIDATION_FAILED.
+         */
+        get: operations["GetInventoryReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/expenses/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The fixed expense categories with Serbian labels (Owner). */
+        get: operations["ListExpenseCategories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/expenses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Expenses, newest first, with totals per category (Owner). Optional period filter (same values as the dashboard).
+         * @description Errors: 400 VALIDATION_FAILED; 403 FORBIDDEN (Staff).
+         */
+        get: operations["ListExpenses"];
+        put?: never;
+        /**
+         * Enter an expense (Owner).
+         * @description Errors: 400 VALIDATION_FAILED (`expenseDate`, `category`, `description`, `amount`); 403 FORBIDDEN.
+         */
+        post: operations["CreateExpense"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/expenses/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One expense (Owner).
+         * @description Errors: 404 NOT_FOUND.
+         */
+        get: operations["GetExpense"];
+        /**
+         * Change an expense (Owner).
+         * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND.
+         */
+        put: operations["UpdateExpense"];
+        post?: never;
+        /**
+         * Delete an expense (Owner). The audit log keeps its values.
+         * @description Errors: 404 NOT_FOUND.
+         */
+        delete: operations["DeleteExpense"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/blog/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Blog categories with post counts. */
+        get: operations["ListAdminBlogCategories"];
+        put?: never;
+        /**
+         * Add a blog category.
+         * @description Errors: 400 VALIDATION_FAILED; 409 SLUG_TAKEN (`errors.slug`).
+         */
+        post: operations["CreateAdminBlogCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/blog/categories/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change a blog category.
+         * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND; 409 SLUG_TAKEN.
+         */
+        put: operations["UpdateAdminBlogCategory"];
+        post?: never;
+        /**
+         * Delete a blog category that no post (draft or published) uses.
+         * @description Archived posts lose the link. Errors: 404 NOT_FOUND; 409 BLOG_CATEGORY_HAS_POSTS.
+         */
+        delete: operations["DeleteAdminBlogCategory"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/blog/posts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Posts (drafts included, archived excluded), last changed first.
+         * @description `q` search, `status` Draft|Scheduled|Published, `categoryId`, paging. Errors: 400 VALIDATION_FAILED.
+         */
+        get: operations["ListAdminBlogPosts"];
+        put?: never;
+        /**
+         * Create a post as Draft. `contentHtml` is sanitised (the stored value is returned).
+         * @description Errors: 400 VALIDATION_FAILED (`title`, `slug`, `excerpt`, `contentHtml`, `categoryId`, `coverImageKey`), INVALID_IMAGE, UPLOAD_NOT_FOUND; 409 SLUG_TAKEN, IMAGE_NOT_READY, IMAGE_ALREADY_ATTACHED.
+         */
+        post: operations["CreateAdminBlogPost"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/blog/posts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A post with its content and `version`.
+         * @description Errors: 404 NOT_FOUND.
+         */
+        get: operations["GetAdminBlogPost"];
+        /**
+         * Change a post (`version` required). A published post stays published and needs an excerpt and content.
+         * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND; 409 CONCURRENT_EDIT, SLUG_TAKEN, IMAGE_NOT_READY, IMAGE_ALREADY_ATTACHED.
+         */
+        put: operations["UpdateAdminBlogPost"];
+        post?: never;
+        /**
+         * Archive a post (soft delete): never public again, slug freed, cover image files deleted.
+         * @description Errors: 404 NOT_FOUND.
+         */
+        delete: operations["ArchiveAdminBlogPost"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/blog/posts/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish now (`publishedAt` null) or at a future time (state Scheduled until then).
+         * @description Needs an excerpt and content (400 VALIDATION_FAILED `excerpt`/`contentHtml`). Errors: 404 NOT_FOUND; 409 CONCURRENT_EDIT.
+         */
+        post: operations["PublishAdminBlogPost"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/blog/posts/{id}/unpublish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Back to Draft (no longer public; `publishedAt` cleared).
+         * @description Errors: 404 NOT_FOUND; 409 CONCURRENT_EDIT.
+         */
+        post: operations["UnpublishAdminBlogPost"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/cms/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every page key (home, about, privacy, terms, delivery) and whether it has content. */
+        get: operations["ListAdminCmsPages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/cms/pages/home": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Homepage content for editing (null content = empty). */
+        get: operations["GetAdminHomePage"];
+        /**
+         * Save the homepage. Images: `{ key, alt }` with the current key or an upload key (purpose `page`).
+         * @description Errors: 400 VALIDATION_FAILED (paths like `content.hero.title`, `content.whyUs.items[0].title`), INVALID_IMAGE; 409 CONCURRENT_EDIT, IMAGE_NOT_READY.
+         */
+        put: operations["SaveAdminHomePage"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/cms/pages/about": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** O nama for editing. */
+        get: operations["GetAdminAboutPage"];
+        /**
+         * Save O nama: sanitised HTML and up to 6 images.
+         * @description Errors: 400 VALIDATION_FAILED (`content.bodyHtml`, `content.images[i].key`), INVALID_IMAGE; 409 CONCURRENT_EDIT, IMAGE_NOT_READY.
+         */
+        put: operations["SaveAdminAboutPage"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/cms/pages/privacy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Page `privacy` for editing. */
+        get: operations["GetAdminPrivacyPage"];
+        /**
+         * Save page `privacy` (title + sanitised HTML). An empty body makes the page empty (public 404).
+         * @description Errors: 400 VALIDATION_FAILED; 409 CONCURRENT_EDIT.
+         */
+        put: operations["SaveAdminPrivacyPage"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/cms/pages/terms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Page `terms` for editing. */
+        get: operations["GetAdminTermsPage"];
+        /**
+         * Save page `terms` (title + sanitised HTML). An empty body makes the page empty (public 404).
+         * @description Errors: 400 VALIDATION_FAILED; 409 CONCURRENT_EDIT.
+         */
+        put: operations["SaveAdminTermsPage"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/cms/pages/delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Page `delivery` for editing. */
+        get: operations["GetAdminDeliveryPage"];
+        /**
+         * Save page `delivery` (title + sanitised HTML). An empty body makes the page empty (public 404).
+         * @description Errors: 400 VALIDATION_FAILED; 409 CONCURRENT_EDIT.
+         */
+        put: operations["SaveAdminDeliveryPage"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/faq": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** All FAQ items in order (published or not). */
+        get: operations["ListAdminFaq"];
+        put?: never;
+        /**
+         * Add a FAQ item at the end.
+         * @description Errors: 400 VALIDATION_FAILED.
+         */
+        post: operations["CreateAdminFaqItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/faq/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the order: every item id exactly once.
+         * @description Errors: 400 VALIDATION_FAILED (`ids`).
+         */
+        put: operations["ReorderAdminFaq"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/faq/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change a FAQ item (also publish/unpublish with `isPublished`).
+         * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND.
+         */
+        put: operations["UpdateAdminFaqItem"];
+        post?: never;
+        /**
+         * Delete a FAQ item.
+         * @description Errors: 404 NOT_FOUND.
+         */
+        delete: operations["DeleteAdminFaqItem"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/testimonials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** All testimonials. */
+        get: operations["ListAdminTestimonials"];
+        put?: never;
+        /**
+         * Add a real testimonial.
+         * @description Errors: 400 VALIDATION_FAILED.
+         */
+        post: operations["CreateAdminTestimonial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/testimonials/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change a testimonial.
+         * @description Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND.
+         */
+        put: operations["UpdateAdminTestimonial"];
+        post?: never;
+        /**
+         * Delete a testimonial.
+         * @description Errors: 404 NOT_FOUND.
+         */
+        delete: operations["DeleteAdminTestimonial"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/contact-messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Contact-form messages, newest first, with the number of unread ones. */
+        get: operations["ListAdminContactMessages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/contact-messages/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark a message as read. */
+        post: operations["MarkAdminContactMessageRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/contact-messages/{id}/unread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark a message as unread. */
+        post: operations["MarkAdminContactMessageUnread"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/newsletter/subscribers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Newsletter addresses with their status (Owner). No campaigns are sent by the platform (A10).
+         * @description Errors: 400 VALIDATION_FAILED; 403 FORBIDDEN (Staff).
+         */
+        get: operations["ListAdminNewsletterSubscribers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/newsletter/subscribers/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** CSV of confirmed subscribers (Owner): email, consent and confirmation time. Same CSV format as the reports. */
+        get: operations["ExportAdminNewsletterSubscribers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Administrators (active first). `isCurrentUser` marks the signed-in Owner (Owner).
+         * @description Errors: 403 FORBIDDEN (Staff).
+         */
+        get: operations["ListAdminUsers"];
+        put?: never;
+        /**
+         * Invite an administrator: creates the Cognito user (Cognito emails a temporary password) in the role's group.
+         * @description Errors: 400 VALIDATION_FAILED (`email`, `fullName`, `role`); 403 FORBIDDEN; 409 ADMIN_EMAIL_TAKEN (`errors.email`); 503 IDENTITY_PROVIDER_ERROR (Cognito refused; nothing stored).
+         */
+        post: operations["InviteAdminUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change role and active state (Owner). Cognito groups and enabled state follow.
+         * @description A role change takes effect in the API with the user's next token (after sign-in or token refresh, at most the access token lifetime); deactivation blocks the user in the API at once. Errors: 400 VALIDATION_FAILED; 404 NOT_FOUND; 409 CANNOT_CHANGE_SELF (own role or own deactivation), LAST_OWNER (the last active Owner cannot be demoted or deactivated); 503 IDENTITY_PROVIDER_ERROR.
+         */
+        put: operations["UpdateAdminUser"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Audit entries, newest first, with a Serbian `summary` (Owner).
+         * @description Filters `adminUserId`, `entityType`, `entityId`, `action`, `from`/`to` (Serbian dates, inclusive), paging. Errors: 400 VALIDATION_FAILED.
+         */
+        get: operations["ListAuditLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/audit-logs/filters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Entity types (with Serbian labels) and actions that occur in the log, for the filter drop-downs (Owner). */
+        get: operations["GetAuditLogFilters"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AboutPageContent: {
+            bodyHtml: string;
+            images: components["schemas"]["CmsImage"][];
+        };
+        AboutPageContentInput: {
+            bodyHtml?: null | string;
+            images?: null | components["schemas"]["CmsImageInput"][];
+        };
+        AboutPageResponse: {
+            key: string;
+            title: null | string;
+            content: components["schemas"]["AboutPageContent"];
+            seoTitle: null | string;
+            seoDescription: null | string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         AddOrderNoteRequest: {
             note: null | string;
         };
@@ -991,6 +2068,77 @@ export interface components {
             /** Format: int32 */
             quantityDelta: number;
             reason: string;
+        };
+        AdminAboutPageResponse: {
+            key: string;
+            title: null | string;
+            seoTitle: null | string;
+            seoDescription: null | string;
+            hasContent: boolean;
+            content: null | components["schemas"]["AboutPageContent"];
+            /** Format: date-time */
+            updatedAt: string;
+            updatedByAdminName: null | string;
+            /** Format: uint32 */
+            version: number;
+        };
+        AdminBlogCategoryListResponse: {
+            items: components["schemas"]["AdminBlogCategoryResponse"][];
+        };
+        AdminBlogCategoryResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            /** Format: int32 */
+            sortOrder: number;
+            /** Format: int32 */
+            postCount: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        AdminBlogPostListItem: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            slug: string;
+            excerpt: string;
+            coverImage: null | components["schemas"]["ContentImage"];
+            category: null | components["schemas"]["BlogCategoryRef"];
+            status: components["schemas"]["BlogPostStatus"];
+            state: components["schemas"]["BlogPostState"];
+            /** Format: date-time */
+            publishedAt: null | string;
+            author: null | components["schemas"]["BlogAuthorRef"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        AdminBlogPostResponse: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            slug: string;
+            excerpt: string;
+            coverImage: null | components["schemas"]["ContentImage"];
+            contentHtml: string;
+            category: null | components["schemas"]["BlogCategoryRef"];
+            status: components["schemas"]["BlogPostStatus"];
+            state: components["schemas"]["BlogPostState"];
+            /** Format: date-time */
+            publishedAt: null | string;
+            seoTitle: null | string;
+            seoDescription: null | string;
+            author: null | components["schemas"]["BlogAuthorRef"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: uint32 */
+            version: number;
         };
         AdminCategoryListResponse: {
             items: components["schemas"]["AdminCategoryResponse"][];
@@ -1013,6 +2161,23 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        AdminContactMessageItem: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            email: string;
+            message: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            readAt: null | string;
+            readByAdminName: null | string;
+        };
+        AdminContactMessageListResponse: {
+            messages: components["schemas"]["PagedResultOfAdminContactMessageItem"];
+            /** Format: int32 */
+            unreadCount: number;
         };
         AdminCourierSummary: {
             /** Format: uuid */
@@ -1052,6 +2217,35 @@ export interface components {
             /** Format: date-time */
             sentAt: null | string;
             isResent: boolean;
+        };
+        AdminFaqItemResponse: {
+            /** Format: uuid */
+            id: string;
+            question: string;
+            answer: string;
+            /** Format: int32 */
+            sortOrder: number;
+            isPublished: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        AdminFaqListResponse: {
+            items: components["schemas"]["AdminFaqItemResponse"][];
+        };
+        AdminHomePageResponse: {
+            key: string;
+            title: null | string;
+            seoTitle: null | string;
+            seoDescription: null | string;
+            hasContent: boolean;
+            content: null | components["schemas"]["HomePageContent"];
+            /** Format: date-time */
+            updatedAt: string;
+            updatedByAdminName: null | string;
+            /** Format: uint32 */
+            version: number;
         };
         AdminMeResponse: {
             /** Format: uuid */
@@ -1234,11 +2428,25 @@ export interface components {
             /** Format: date-time */
             archivedAt: null | string;
         };
+        AdminRichTextPageResponse: {
+            key: string;
+            title: null | string;
+            seoTitle: null | string;
+            seoDescription: null | string;
+            hasContent: boolean;
+            content: null | components["schemas"]["RichTextPageContent"];
+            /** Format: date-time */
+            updatedAt: string;
+            updatedByAdminName: null | string;
+            /** Format: uint32 */
+            version: number;
+        };
         /** @enum {unknown} */
         AdminRole: "Staff" | "Owner";
         AdminStoreSettingsResponse: {
             storeName: string;
             logoKey: null | string;
+            logo: null | components["schemas"]["StoreLogo"];
             contactEmail: null | string;
             phone: null | string;
             businessAddress: null | string;
@@ -1263,6 +2471,62 @@ export interface components {
             updatedByAdminName: null | string;
             /** Format: uint32 */
             version: number;
+        };
+        AdminSubscriberItem: {
+            /** Format: uuid */
+            id: string;
+            email: string;
+            status: components["schemas"]["NewsletterSubscriberStatus"];
+            /** Format: date-time */
+            consentedAt: string;
+            /** Format: date-time */
+            confirmedAt: null | string;
+            /** Format: date-time */
+            unsubscribedAt: null | string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AdminSubscriberListResponse: {
+            subscribers: components["schemas"]["PagedResultOfAdminSubscriberItem"];
+            counts: {
+                [key: string]: number;
+            };
+        };
+        AdminTestimonialListResponse: {
+            items: components["schemas"]["AdminTestimonialResponse"][];
+        };
+        AdminTestimonialResponse: {
+            /** Format: uuid */
+            id: string;
+            authorName: string;
+            place: null | string;
+            text: string;
+            isPublished: boolean;
+            /** Format: int32 */
+            sortOrder: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        AdminUserListResponse: {
+            items: components["schemas"]["AdminUserResponse"][];
+        };
+        AdminUserResponse: {
+            /** Format: uuid */
+            id: string;
+            email: string;
+            fullName: string;
+            role: components["schemas"]["AdminRole"];
+            roleLabel: string;
+            isActive: boolean;
+            /** Format: date-time */
+            lastLoginAt: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            isCurrentUser: boolean;
         };
         AdminVariantResponse: {
             /** Format: uuid */
@@ -1315,6 +2579,48 @@ export interface components {
             uploadKey: string;
             altText?: null | string;
         };
+        AuditFilterOption: {
+            value: string;
+            label: string;
+        };
+        AuditLogFiltersResponse: {
+            entityTypes: components["schemas"]["AuditFilterOption"][];
+            actions: string[];
+        };
+        AuditLogItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            createdAt: string;
+            action: string;
+            entityType: null | string;
+            entityId: null | string;
+            /** Format: uuid */
+            adminUserId: null | string;
+            adminName: null | string;
+            adminEmail: null | string;
+            ipAddress: null | string;
+            summary: string;
+            changes: null | components["schemas"]["JsonElement"];
+        };
+        BlogAuthorRef: {
+            /** Format: uuid */
+            id: string;
+            fullName: string;
+        };
+        BlogCategoryRef: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+        };
+        BlogImageRequest: {
+            uploadKey: string;
+        };
+        /** @enum {unknown} */
+        BlogPostState: "Draft" | "Scheduled" | "Published";
+        /** @enum {unknown} */
+        BlogPostStatus: "Draft" | "Published";
         /** @enum {unknown} */
         CartAdjustmentReason: "unavailable" | "quantityReduced" | "priceChanged";
         CartQuoteAdjustment: {
@@ -1407,6 +2713,15 @@ export interface components {
             /** Format: int32 */
             height: number;
         };
+        CategorySalesItem: {
+            /** Format: uuid */
+            categoryId: null | string;
+            categoryName: string;
+            /** Format: int32 */
+            quantity: number;
+            /** Format: double */
+            revenue: number;
+        };
         ChangeOrderStatusRequest: {
             newStatus: components["schemas"]["OrderStatus"];
             /** Format: uint32 */
@@ -1426,6 +2741,53 @@ export interface components {
             lastName?: null | string;
             email?: null | string;
             phone?: null | string;
+        };
+        CmsImage: {
+            key: string;
+            baseUrl: string;
+            widths: number[];
+            /** Format: int32 */
+            width: number;
+            /** Format: int32 */
+            height: number;
+            alt: null | string;
+        };
+        CmsImageInput: {
+            key?: null | string;
+            alt?: null | string;
+        };
+        CmsPageListResponse: {
+            items: components["schemas"]["CmsPageSummary"][];
+        };
+        CmsPageSummary: {
+            key: string;
+            title: null | string;
+            hasContent: boolean;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CmsTextSection: {
+            title: null | string;
+            text: null | string;
+        };
+        CmsTextSectionInput: {
+            title?: null | string;
+            text?: null | string;
+        };
+        ContactRequest: {
+            name: null | string;
+            email: null | string;
+            message: null | string;
+            website?: null | string;
+        };
+        ContentImage: {
+            key: string;
+            baseUrl: string;
+            widths: number[];
+            /** Format: int32 */
+            width: number;
+            /** Format: int32 */
+            height: number;
         };
         CourierListResponse: {
             items: components["schemas"]["CourierResponse"][];
@@ -1499,12 +2861,123 @@ export interface components {
             /** Format: int32 */
             sortOrder?: null | number;
         };
+        DashboardSummaryResponse: {
+            period: components["schemas"]["PeriodInfo"];
+            current: components["schemas"]["PeriodMetrics"];
+            previous: components["schemas"]["PeriodMetrics"];
+            queues: components["schemas"]["OrderQueues"];
+            currency: string;
+        };
         /** @enum {unknown} */
         EmailOutboxStatus: "Pending" | "Processing" | "Sent" | "Dead";
         /** @enum {unknown} */
-        EmailTemplate: "OrderReceived" | "OrderAccepted" | "OrderPreparing" | "OrderShipped" | "OrderDelivered" | "OrderCancelled";
+        EmailTemplate: "OrderReceived" | "OrderAccepted" | "OrderPreparing" | "OrderShipped" | "OrderDelivered" | "OrderCancelled" | "NewsletterConfirm" | "ContactMessage";
+        ExpenseCategoryOption: {
+            value: string;
+            label: string;
+        };
+        ExpenseCategoryTotal: {
+            category: string;
+            categoryLabel: string;
+            /** Format: double */
+            amount: number;
+            /** Format: int32 */
+            count: number;
+        };
+        ExpenseListResponse: {
+            period: null | components["schemas"]["PeriodInfo"];
+            expenses: components["schemas"]["PagedResultOfExpenseResponse"];
+            /** Format: double */
+            total: number;
+            totals: components["schemas"]["ExpenseCategoryTotal"][];
+            currency: string;
+        };
+        ExpenseResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            expenseDate: string;
+            category: string;
+            categoryLabel: string;
+            description: string;
+            /** Format: double */
+            amount: number;
+            /** Format: uuid */
+            createdByAdminId: string;
+            createdByAdminName: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        FormAcceptedResponse: {
+            message: string;
+        };
         HealthResponse: {
             status: string;
+        };
+        HomeHero: {
+            title: null | string;
+            subtitle: null | string;
+            primaryCtaLabel: null | string;
+            secondaryCtaLabel: null | string;
+            image: null | components["schemas"]["CmsImage"];
+        };
+        HomeHeroInput: {
+            title?: null | string;
+            subtitle?: null | string;
+            primaryCtaLabel?: null | string;
+            secondaryCtaLabel?: null | string;
+            image?: null | components["schemas"]["CmsImageInput"];
+        };
+        HomePageContent: {
+            hero: null | components["schemas"]["HomeHero"];
+            intro: null | components["schemas"]["CmsTextSection"];
+            story: null | components["schemas"]["HomeStory"];
+            whyUs: null | components["schemas"]["HomeWhyUs"];
+            quality: null | components["schemas"]["CmsTextSection"];
+        };
+        HomePageContentInput: {
+            hero?: null | components["schemas"]["HomeHeroInput"];
+            intro?: null | components["schemas"]["CmsTextSectionInput"];
+            story?: null | components["schemas"]["HomeStoryInput"];
+            whyUs?: null | components["schemas"]["HomeWhyUsInput"];
+            quality?: null | components["schemas"]["CmsTextSectionInput"];
+        };
+        HomePageResponse: {
+            key: string;
+            title: null | string;
+            content: components["schemas"]["HomePageContent"];
+            seoTitle: null | string;
+            seoDescription: null | string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        HomeStory: {
+            title: null | string;
+            text: null | string;
+            image: null | components["schemas"]["CmsImage"];
+        };
+        HomeStoryInput: {
+            title?: null | string;
+            text?: null | string;
+            image?: null | components["schemas"]["CmsImageInput"];
+        };
+        HomeWhyUs: {
+            title: null | string;
+            items: components["schemas"]["HomeWhyUsItem"][];
+        };
+        HomeWhyUsInput: {
+            title?: null | string;
+            items?: null | components["schemas"]["HomeWhyUsItemInput"][];
+        };
+        HomeWhyUsItem: {
+            title: string;
+            text: null | string;
+        };
+        HomeWhyUsItemInput: {
+            title: null | string;
+            text: null | string;
         };
         InventoryItemResponse: {
             /** Format: uuid */
@@ -1542,6 +3015,46 @@ export interface components {
         };
         /** @enum {unknown} */
         InventoryMovementType: "InitialStock" | "ManualAdjustment" | "OrderPlaced" | "OrderCancelled" | "ReturnRestock";
+        InventoryReportResponse: {
+            items: components["schemas"]["InventoryReportRow"][];
+            /** Format: int32 */
+            totalQuantity: number;
+            /** Format: double */
+            totalStockValue: number;
+            /** Format: date-time */
+            generatedAt: string;
+            currency: string;
+        };
+        InventoryReportRow: {
+            /** Format: uuid */
+            variantId: string;
+            /** Format: uuid */
+            productId: string;
+            productName: string;
+            variantName: string;
+            sku: string;
+            categoryName: string;
+            /** Format: int32 */
+            quantityOnHand: number;
+            /** Format: int32 */
+            lowStockThreshold: number;
+            status: components["schemas"]["StockStatus"];
+            statusLabel: string;
+            /** Format: double */
+            regularPrice: number;
+            /** Format: double */
+            stockValue: number;
+            isActive: boolean;
+        };
+        InviteAdminRequest: {
+            email: null | string;
+            fullName: null | string;
+            role: components["schemas"]["AdminRole"];
+        };
+        JsonElement: unknown;
+        LatestBlogPostsResponse: {
+            items: components["schemas"]["PublicBlogPostListItem"][];
+        };
         LowStockResponse: {
             items: components["schemas"]["InventoryItemResponse"][];
             /** Format: int32 */
@@ -1557,6 +3070,49 @@ export interface components {
             shippedAt?: null | string;
             note?: null | string;
         };
+        NewsletterStatusResponse: {
+            status: components["schemas"]["NewsletterSubscriberStatus"];
+            message: string;
+        };
+        NewsletterSubscribeRequest: {
+            email: null | string;
+            consent: null | boolean;
+            website?: null | string;
+        };
+        /** @enum {unknown} */
+        NewsletterSubscriberStatus: "Pending" | "Confirmed" | "Unsubscribed";
+        NewsletterTokenRequest: {
+            token: string;
+        };
+        OrderCountPoint: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            label: string;
+            /** Format: int32 */
+            orderCount: number;
+            /** Format: int32 */
+            placedCount: number;
+        };
+        OrderQueues: {
+            /** Format: int32 */
+            awaitingConfirmation: number;
+            /** Format: int32 */
+            accepted: number;
+            /** Format: int32 */
+            preparing: number;
+            /** Format: int32 */
+            inPreparation: number;
+            /** Format: int32 */
+            awaitingShipment: number;
+            /** Format: int32 */
+            deliveryFailed: number;
+        };
+        OrderSeriesResponse: {
+            period: components["schemas"]["PeriodInfo"];
+            points: components["schemas"]["OrderCountPoint"][];
+        };
         /** @enum {unknown} */
         OrderStatus: "Received" | "Accepted" | "Preparing" | "Shipped" | "Delivered" | "Cancelled" | "Rejected" | "DeliveryFailed";
         OrderStatusCount: {
@@ -1568,6 +3124,28 @@ export interface components {
             counts: components["schemas"]["OrderStatusCount"][];
             /** Format: int32 */
             total: number;
+        };
+        PagedResultOfAdminBlogPostListItem: {
+            items: components["schemas"]["AdminBlogPostListItem"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalItems: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PagedResultOfAdminContactMessageItem: {
+            items: components["schemas"]["AdminContactMessageItem"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalItems: number;
+            /** Format: int32 */
+            totalPages: number;
         };
         PagedResultOfAdminEmailItem: {
             items: components["schemas"]["AdminEmailItem"][];
@@ -1602,6 +3180,39 @@ export interface components {
             /** Format: int32 */
             totalPages: number;
         };
+        PagedResultOfAdminSubscriberItem: {
+            items: components["schemas"]["AdminSubscriberItem"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalItems: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PagedResultOfAuditLogItem: {
+            items: components["schemas"]["AuditLogItem"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalItems: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PagedResultOfExpenseResponse: {
+            items: components["schemas"]["ExpenseResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalItems: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
         PagedResultOfInventoryItemResponse: {
             items: components["schemas"]["InventoryItemResponse"][];
             /** Format: int32 */
@@ -1624,6 +3235,17 @@ export interface components {
             /** Format: int32 */
             totalPages: number;
         };
+        PagedResultOfPublicBlogPostListItem: {
+            items: components["schemas"]["PublicBlogPostListItem"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalItems: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
         PagedResultOfPublicProductListItem: {
             items: components["schemas"]["PublicProductListItem"][];
             /** Format: int32 */
@@ -1637,6 +3259,47 @@ export interface components {
         };
         /** @enum {unknown} */
         PaymentMethod: "CashOnDelivery";
+        PeriodInfo: {
+            period: string;
+            current: components["schemas"]["PeriodRange"];
+            previous: components["schemas"]["PeriodRange"];
+            granularity: components["schemas"]["SeriesGranularity"];
+            timeZone: string;
+        };
+        PeriodMetrics: {
+            /** Format: double */
+            orderedValue: number;
+            /** Format: int32 */
+            orderedCount: number;
+            /** Format: double */
+            deliveredValue: number;
+            /** Format: int32 */
+            deliveredCount: number;
+            /** Format: double */
+            estimatedCollected: number;
+            /** Format: double */
+            actualCollected: number;
+            /** Format: int32 */
+            collectedCount: number;
+            /** Format: double */
+            expenses: number;
+            /** Format: double */
+            estimatedProfit: number;
+            /** Format: double */
+            averageOrderValue: null | number;
+            /** Format: int32 */
+            cancelledCount: number;
+            /** Format: int32 */
+            rejectedCount: number;
+            /** Format: int32 */
+            cancelledOrRejectedCount?: number;
+        };
+        PeriodRange: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+        };
         PlacedOrderItem: {
             /** Format: uuid */
             variantId: string;
@@ -1697,6 +3360,42 @@ export interface components {
         PublicAvailabilityResponse: {
             items: components["schemas"]["PublicAvailabilityItem"][];
         };
+        PublicBlogCategory: {
+            name: string;
+            slug: string;
+            /** Format: int32 */
+            postCount: number;
+        };
+        PublicBlogCategoryListResponse: {
+            items: components["schemas"]["PublicBlogCategory"][];
+        };
+        PublicBlogCategoryRef: {
+            name: string;
+            slug: string;
+        };
+        PublicBlogPostListItem: {
+            title: string;
+            slug: string;
+            excerpt: string;
+            coverImage: null | components["schemas"]["ContentImage"];
+            category: null | components["schemas"]["PublicBlogCategoryRef"];
+            /** Format: date-time */
+            publishedAt: string;
+        };
+        PublicBlogPostResponse: {
+            title: string;
+            slug: string;
+            excerpt: string;
+            coverImage: null | components["schemas"]["ContentImage"];
+            contentHtml: string;
+            category: null | components["schemas"]["PublicBlogCategoryRef"];
+            /** Format: date-time */
+            publishedAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            seoTitle: null | string;
+            seoDescription: null | string;
+        };
         PublicCategoryDetailResponse: {
             /** Format: uuid */
             id: string;
@@ -1720,6 +3419,15 @@ export interface components {
             image: null | components["schemas"]["PublicImageResponse"];
             /** Format: int32 */
             productCount: number;
+        };
+        PublicFaqItem: {
+            /** Format: uuid */
+            id: string;
+            question: string;
+            answer: string;
+        };
+        PublicFaqResponse: {
+            items: components["schemas"]["PublicFaqItem"][];
         };
         PublicImageResponse: {
             baseUrl: string;
@@ -1790,6 +3498,7 @@ export interface components {
         PublicStoreResponse: {
             storeName: string;
             logoKey: null | string;
+            logo: null | components["schemas"]["StoreLogo"];
             contact: components["schemas"]["PublicStoreContact"];
             social: components["schemas"]["PublicStoreSocial"];
             shipping: components["schemas"]["PublicStoreShipping"];
@@ -1815,6 +3524,16 @@ export interface components {
             instagramUrl: null | string;
             otherLinks: components["schemas"]["PublicStoreLink"][];
         };
+        PublicTestimonial: {
+            /** Format: uuid */
+            id: string;
+            authorName: string;
+            place: null | string;
+            text: string;
+        };
+        PublicTestimonialsResponse: {
+            items: components["schemas"]["PublicTestimonial"][];
+        };
         PublicVariantResponse: {
             /** Format: uuid */
             id: string;
@@ -1833,9 +3552,18 @@ export interface components {
             /** Format: int32 */
             maxOrderQuantity: number;
         };
+        PublishBlogPostRequest: {
+            /** Format: uint32 */
+            version: number;
+            /** Format: date-time */
+            publishedAt: null | string;
+        };
         /** @enum {unknown} */
         QuantityLimitReason: "stock" | "orderLimit" | null;
         ReorderCategoriesRequest: {
+            ids: string[];
+        };
+        ReorderFaqRequest: {
             ids: string[];
         };
         ReorderProductImagesRequest: {
@@ -1843,9 +3571,102 @@ export interface components {
             /** Format: uuid */
             mainImageId: null | string;
         };
+        RevenuePoint: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            label: string;
+            /** Format: double */
+            orderedValue: number;
+            /** Format: double */
+            deliveredValue: number;
+        };
+        RevenueSeriesResponse: {
+            period: components["schemas"]["PeriodInfo"];
+            points: components["schemas"]["RevenuePoint"][];
+            currency: string;
+        };
         RevokeTrackingResponse: {
             /** Format: int32 */
             revokedCount: number;
+        };
+        RichTextPageContent: {
+            bodyHtml: string;
+        };
+        RichTextPageContentInput: {
+            bodyHtml?: null | string;
+        };
+        RichTextPageResponse: {
+            key: string;
+            title: null | string;
+            content: components["schemas"]["RichTextPageContent"];
+            seoTitle: null | string;
+            seoDescription: null | string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        SalesByCategoryResponse: {
+            period: components["schemas"]["PeriodInfo"];
+            items: components["schemas"]["CategorySalesItem"][];
+            /** Format: double */
+            totalRevenue: number;
+            currency: string;
+        };
+        SalesByVariantRow: {
+            /** Format: uuid */
+            variantId: string;
+            /** Format: uuid */
+            productId: string;
+            productName: string;
+            variantName: string;
+            sku: string;
+            categoryName: string;
+            /** Format: int32 */
+            quantity: number;
+            /** Format: double */
+            revenue: number;
+        };
+        SalesReportResponse: {
+            period: components["schemas"]["PeriodInfo"];
+            byVariant: components["schemas"]["SalesByVariantRow"][];
+            byCategory: components["schemas"]["CategorySalesItem"][];
+            /** Format: int32 */
+            totalQuantity: number;
+            /** Format: double */
+            totalRevenue: number;
+            /** Format: int32 */
+            deliveredOrders: number;
+            /** Format: double */
+            shippingRevenue: number;
+            currency: string;
+        };
+        SaveAboutPageRequest: {
+            /** Format: uint32 */
+            version: null | number;
+            title: null | string;
+            seoTitle: null | string;
+            seoDescription: null | string;
+            content: null | components["schemas"]["AboutPageContentInput"];
+        };
+        SaveBlogCategoryRequest: {
+            name: null | string;
+            slug: null | string;
+            /** Format: int32 */
+            sortOrder: number;
+        };
+        SaveBlogPostRequest: {
+            /** Format: uint32 */
+            version: null | number;
+            title: null | string;
+            slug: null | string;
+            excerpt: null | string;
+            coverImageKey: null | string;
+            contentHtml: null | string;
+            /** Format: uuid */
+            categoryId: null | string;
+            seoTitle: null | string;
+            seoDescription: null | string;
         };
         SaveCategoryRequest: {
             name: string;
@@ -1865,6 +3686,48 @@ export interface components {
             /** Format: int32 */
             sortOrder: number;
         };
+        SaveExpenseRequest: {
+            /** Format: date */
+            expenseDate: string;
+            category: string;
+            description: null | string;
+            /** Format: double */
+            amount: number;
+        };
+        SaveFaqItemRequest: {
+            question: null | string;
+            answer: null | string;
+            isPublished: boolean;
+        };
+        SaveHomePageRequest: {
+            /** Format: uint32 */
+            version: null | number;
+            title: null | string;
+            seoTitle: null | string;
+            seoDescription: null | string;
+            content: null | components["schemas"]["HomePageContentInput"];
+        };
+        SaveRichTextPageRequest: {
+            /** Format: uint32 */
+            version: null | number;
+            title: null | string;
+            seoTitle: null | string;
+            seoDescription: null | string;
+            content: null | components["schemas"]["RichTextPageContentInput"];
+        };
+        SaveTestimonialRequest: {
+            authorName: null | string;
+            place: null | string;
+            text: null | string;
+            isPublished: boolean;
+            /** Format: int32 */
+            sortOrder: number;
+        };
+        SeoPageRoute: {
+            key: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         SeoRoute: {
             slug: string;
             /** Format: date-time */
@@ -1873,7 +3736,12 @@ export interface components {
         SeoRoutesResponse: {
             categories: components["schemas"]["SeoRoute"][];
             products: components["schemas"]["SeoRoute"][];
+            blogPosts: components["schemas"]["SeoRoute"][];
+            blogCategories: components["schemas"]["SeoRoute"][];
+            pages: components["schemas"]["SeoPageRoute"][];
         };
+        /** @enum {unknown} */
+        SeriesGranularity: "Day" | "Month";
         SetLowStockThresholdRequest: {
             /** Format: int32 */
             lowStockThreshold: number;
@@ -1886,6 +3754,18 @@ export interface components {
             /** Format: uint32 */
             version: number;
         };
+        StatusCountItem: {
+            status: components["schemas"]["OrderStatus"];
+            label: string;
+            /** Format: int32 */
+            count: number;
+        };
+        StatusDistributionResponse: {
+            period: components["schemas"]["PeriodInfo"];
+            items: components["schemas"]["StatusCountItem"][];
+            /** Format: int32 */
+            total: number;
+        };
         /** @enum {unknown} */
         StockReturnPolicy: "None" | "Automatic" | "AdminChoice";
         /** @enum {unknown} */
@@ -1893,6 +3773,31 @@ export interface components {
         StoreLinkDto: {
             label: null | string;
             url: null | string;
+        };
+        StoreLogo: {
+            key: string;
+            baseUrl: string;
+            widths: number[];
+            /** Format: int32 */
+            width: number;
+            /** Format: int32 */
+            height: number;
+            emailPngUrl: string;
+        };
+        TopProductItem: {
+            /** Format: uuid */
+            productId: string;
+            productName: string;
+            /** Format: int32 */
+            quantity: number;
+            /** Format: double */
+            revenue: number;
+        };
+        TopProductsResponse: {
+            period: components["schemas"]["PeriodInfo"];
+            byQuantity: components["schemas"]["TopProductItem"][];
+            byRevenue: components["schemas"]["TopProductItem"][];
+            currency: string;
         };
         TrackingLookupRequest: {
             code: null | string;
@@ -1919,6 +3824,14 @@ export interface components {
             /** Format: date-time */
             at: string;
             customerMessage: null | string;
+        };
+        UnpublishBlogPostRequest: {
+            /** Format: uint32 */
+            version: number;
+        };
+        UpdateAdminRequest: {
+            role: components["schemas"]["AdminRole"];
+            isActive: boolean;
         };
         UpdateProductImageRequest: {
             altText: null | string;
@@ -1950,6 +3863,7 @@ export interface components {
             /** Format: uint32 */
             version: number;
             storeName: null | string;
+            logoKey: null | string;
             contactEmail: null | string;
             phone: null | string;
             businessAddress: null | string;
@@ -2187,6 +4101,57 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    SendContactMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormAcceptedResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2463,6 +4428,441 @@ export interface operations {
             };
         };
     };
+    ListBlogCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicBlogCategoryListResponse"];
+                };
+            };
+        };
+    };
+    ListBlogPosts: {
+        parameters: {
+            query?: {
+                category?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagedResultOfPublicBlogPostListItem"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetBlogPost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicBlogPostResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListLatestBlogPosts: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LatestBlogPostsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetHomePage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomePageResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetAboutPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AboutPageResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetPrivacyPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RichTextPageResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetTermsPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RichTextPageResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetDeliveryPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RichTextPageResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListFaq: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicFaqResponse"];
+                };
+            };
+        };
+    };
+    ListTestimonials: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicTestimonialsResponse"];
+                };
+            };
+        };
+    };
+    SubscribeNewsletter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewsletterSubscribeRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormAcceptedResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ConfirmNewsletter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewsletterTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewsletterStatusResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    UnsubscribeNewsletter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewsletterTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewsletterStatusResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
     GetAdminMe: {
         parameters: {
             query?: never;
@@ -2592,6 +4992,66 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    AddAdminBlogImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlogImageRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContentImage"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4965,6 +7425,2849 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetDashboardSummary: {
+        parameters: {
+            query?: {
+                period?: string;
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardSummaryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetDashboardRevenueSeries: {
+        parameters: {
+            query?: {
+                period?: string;
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevenueSeriesResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetDashboardOrderSeries: {
+        parameters: {
+            query?: {
+                period?: string;
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderSeriesResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetDashboardTopProducts: {
+        parameters: {
+            query?: {
+                limit?: number;
+                period?: string;
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopProductsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetDashboardSalesByCategory: {
+        parameters: {
+            query?: {
+                period?: string;
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesByCategoryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetDashboardStatusDistribution: {
+        parameters: {
+            query?: {
+                period?: string;
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusDistributionResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetSalesReport: {
+        parameters: {
+            query?: {
+                format?: string;
+                groupBy?: string;
+                period?: string;
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesReportResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetInventoryReport: {
+        parameters: {
+            query?: {
+                format?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InventoryReportResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListExpenseCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseCategoryOption"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListExpenses: {
+        parameters: {
+            query?: {
+                period?: string;
+                from?: string;
+                to?: string;
+                category?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    CreateExpense: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveExpenseRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetExpense: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    UpdateExpense: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveExpenseRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    DeleteExpense: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListAdminBlogCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminBlogCategoryListResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    CreateAdminBlogCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveBlogCategoryRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminBlogCategoryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    UpdateAdminBlogCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveBlogCategoryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminBlogCategoryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    DeleteAdminBlogCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListAdminBlogPosts: {
+        parameters: {
+            query?: {
+                q?: string;
+                status?: string;
+                categoryId?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagedResultOfAdminBlogPostListItem"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    CreateAdminBlogPost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveBlogPostRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminBlogPostResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetAdminBlogPost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminBlogPostResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    UpdateAdminBlogPost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveBlogPostRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminBlogPostResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ArchiveAdminBlogPost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    PublishAdminBlogPost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishBlogPostRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminBlogPostResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    UnpublishAdminBlogPost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnpublishBlogPostRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminBlogPostResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListAdminCmsPages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CmsPageListResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetAdminHomePage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminHomePageResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    SaveAdminHomePage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveHomePageRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminHomePageResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetAdminAboutPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminAboutPageResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    SaveAdminAboutPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveAboutPageRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminAboutPageResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetAdminPrivacyPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminRichTextPageResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    SaveAdminPrivacyPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveRichTextPageRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminRichTextPageResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetAdminTermsPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminRichTextPageResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    SaveAdminTermsPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveRichTextPageRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminRichTextPageResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetAdminDeliveryPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminRichTextPageResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    SaveAdminDeliveryPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveRichTextPageRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminRichTextPageResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListAdminFaq: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFaqListResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    CreateAdminFaqItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveFaqItemRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFaqItemResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ReorderAdminFaq: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderFaqRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFaqListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    UpdateAdminFaqItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveFaqItemRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFaqItemResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    DeleteAdminFaqItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListAdminTestimonials: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTestimonialListResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    CreateAdminTestimonial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveTestimonialRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTestimonialResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    UpdateAdminTestimonial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveTestimonialRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTestimonialResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    DeleteAdminTestimonial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListAdminContactMessages: {
+        parameters: {
+            query?: {
+                unreadOnly?: boolean;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminContactMessageListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    MarkAdminContactMessageRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminContactMessageItem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    MarkAdminContactMessageUnread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminContactMessageItem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListAdminNewsletterSubscribers: {
+        parameters: {
+            query?: {
+                status?: string;
+                q?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSubscriberListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ExportAdminNewsletterSubscribers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListAdminUsers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserListResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    InviteAdminUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteAdminRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    UpdateAdminUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAdminRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    ListAuditLogs: {
+        parameters: {
+            query?: {
+                adminUserId?: string;
+                entityType?: string;
+                entityId?: string;
+                action?: string;
+                from?: string;
+                to?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagedResultOfAuditLogItem"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+        };
+    };
+    GetAuditLogFilters: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditLogFiltersResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

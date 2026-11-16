@@ -15,6 +15,7 @@ import { SrDatePipe } from '@zladovce/utilities';
 import { DeadEmailsCard } from './dead-emails-card';
 import { LowStockCard } from './low-stock-card';
 import { OrdersCard } from './orders-card';
+import { SalesOverview } from './sales-overview';
 
 type HealthState =
   | { status: 'loading' }
@@ -22,8 +23,9 @@ type HealthState =
   | { status: 'error'; error: ApiError };
 
 /**
- * Kontrolna tabla: orders waiting for work (Phase 5), packages running low (Phase 3), who is
- * signed in and whether the API answers. Phase 7 adds the business metrics and charts.
+ * Kontrolna tabla: business numbers and charts for a chosen period (Phase 7, P1.8), orders
+ * waiting for work (Phase 5), packages running low (Phase 3), who is signed in and whether the
+ * API answers.
  */
 @Component({
   selector: 'adm-dashboard-page',
@@ -37,13 +39,19 @@ type HealthState =
     DeadEmailsCard,
     LowStockCard,
     OrdersCard,
+    SalesOverview,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <h1 class="text-3xl">Kontrolna tabla</h1>
 
-    <div class="mt-6 grid max-w-5xl gap-6 lg:grid-cols-[1.4fr_1fr]">
-      <adm-dead-emails-card />
+    <div class="max-w-6xl [&_ui-card]:mt-6"><adm-dead-emails-card /></div>
+
+    <adm-sales-overview class="mt-6 max-w-6xl" />
+
+    <h2 class="mt-10 text-2xl">Šta treba uraditi</h2>
+    <p class="mt-1 text-sm text-ink-700">Trenutno stanje, ne zavisi od izabranog perioda.</p>
+    <div class="mt-4 grid max-w-6xl gap-6 lg:grid-cols-[1.4fr_1fr]">
       <adm-orders-card />
       <adm-low-stock-card />
 

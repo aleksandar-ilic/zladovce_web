@@ -121,6 +121,7 @@ export function paged<T>(items: T[], page = 1, pageSize = 12, totalItems = items
 export const STORE: PublicStore = {
   storeName: 'Zladovce',
   logoKey: null,
+  logo: null,
   contact: { email: null, phone: null, address: null },
   social: { facebookUrl: null, instagramUrl: null, otherLinks: [] },
   shipping: {

@@ -48,6 +48,7 @@ function providers() {
 const SETTINGS: AdminStoreSettings = {
   storeName: 'Zladovce',
   logoKey: null,
+  logo: null,
   contactEmail: 'kontakt@zladovce.rs',
   phone: null,
   businessAddress: null,
@@ -182,6 +183,7 @@ describe('store settings form', () => {
     expect(settingsRequest(form, 41)).toEqual({
       version: 41,
       storeName: 'Zladovce',
+      logoKey: null,
       contactEmail: 'kontakt@zladovce.rs',
       phone: null,
       businessAddress: null,

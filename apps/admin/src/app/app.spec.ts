@@ -421,22 +421,45 @@ describe('shell and dashboard', () => {
     expect(links.map(text)).toEqual([
       'Kontrolna tabla',
       'Porudžbine',
+      'Izveštaji',
+      'Troškovi',
+      'Poruke kupaca',
       'E-poruke',
       'Proizvodi',
       'Kategorije',
       'Zalihe',
-      'Kuriri',
+      'Blog',
+      'Sadržaj sajta',
+      'Newsletter',
       'Podešavanja',
+      'Kuriri',
+      'Administratori',
+      'Dnevnik izmena',
     ]);
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/',
       '/porudzbine',
+      '/izvestaji',
+      '/troskovi',
+      '/poruke',
       '/e-poruke',
       '/proizvodi',
       '/kategorije',
       '/zalihe',
-      '/kuriri',
+      '/blog',
+      '/sadrzaj',
+      '/newsletter',
       '/podesavanja',
+      '/kuriri',
+      '/administratori',
+      '/dnevnik-izmena',
+    ]);
+    // Section headings group the menu.
+    expect([...ctx.root.querySelectorAll('mat-sidenav nav h2')].map(text)).toEqual([
+      'Prodaja',
+      'Katalog',
+      'Sadržaj',
+      'Podešavanja',
     ]);
     expect(links[0]?.getAttribute('aria-current')).toBe('page');
     expect(ctx.root.querySelector('a.skip-link')).not.toBeNull();

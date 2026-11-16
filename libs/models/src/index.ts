@@ -85,7 +85,8 @@ export type AttachProductImageRequest = Schemas['AttachProductImageRequest'];
 export type ReorderProductImagesRequest = Schemas['ReorderProductImagesRequest'];
 export type UpdateProductImageRequest = Schemas['UpdateProductImageRequest'];
 
-export type UploadPurpose = 'product' | 'category';
+/** Upload folders: product and category photos, blog images, CMS page images and the store logo. */
+export type UploadPurpose = 'product' | 'category' | 'blog' | 'page' | 'logo';
 export type CreateUploadUrlRequest = Omit<Schemas['CreateUploadUrlRequest'], 'purpose'> & {
   purpose: UploadPurpose;
 };
@@ -193,3 +194,123 @@ export type AdminEmailItem = Schemas['AdminEmailItem'];
 export type AdminEmailDetail = Schemas['AdminEmailDetail'];
 export type AdminEmailAttempt = Schemas['AdminEmailAttempt'];
 export type RevokeTrackingResponse = Schemas['RevokeTrackingResponse'];
+
+// ---------------------------------------------------------------------------------------------
+// Phase 7 – analytics, reports, expenses, blog, CMS, newsletter, contact, admins, audit (generated).
+// ---------------------------------------------------------------------------------------------
+/** `period` query of dashboard, report and expense endpoints (`custom` needs `from`/`to`). */
+export type DashboardPeriodKey =
+  'today' | 'yesterday' | 'last7' | 'last30' | 'thisMonth' | 'lastMonth' | 'thisYear' | 'custom';
+export type SeriesGranularity = Schemas['SeriesGranularity'];
+export type PeriodInfo = Schemas['PeriodInfo'];
+export type PeriodRange = Schemas['PeriodRange'];
+export type PeriodMetrics = Schemas['PeriodMetrics'];
+export type OrderQueues = Schemas['OrderQueues'];
+export type DashboardSummary = Schemas['DashboardSummaryResponse'];
+export type RevenuePoint = Schemas['RevenuePoint'];
+export type RevenueSeries = Schemas['RevenueSeriesResponse'];
+export type OrderCountPoint = Schemas['OrderCountPoint'];
+export type OrderSeries = Schemas['OrderSeriesResponse'];
+export type TopProductItem = Schemas['TopProductItem'];
+export type TopProducts = Schemas['TopProductsResponse'];
+export type CategorySalesItem = Schemas['CategorySalesItem'];
+export type SalesByCategory = Schemas['SalesByCategoryResponse'];
+export type StatusCountItem = Schemas['StatusCountItem'];
+export type StatusDistribution = Schemas['StatusDistributionResponse'];
+
+export type SalesByVariantRow = Schemas['SalesByVariantRow'];
+export type SalesReport = Schemas['SalesReportResponse'];
+export type InventoryReportRow = Schemas['InventoryReportRow'];
+export type InventoryReport = Schemas['InventoryReportResponse'];
+
+export type ExpenseCategoryOption = Schemas['ExpenseCategoryOption'];
+export type ExpenseCategoryTotal = Schemas['ExpenseCategoryTotal'];
+export type Expense = Schemas['ExpenseResponse'];
+export type ExpenseList = Schemas['ExpenseListResponse'];
+export type SaveExpenseRequest = Schemas['SaveExpenseRequest'];
+
+export type ContentImage = Schemas['ContentImage'];
+export type BlogPostStatus = Schemas['BlogPostStatus'];
+export type BlogPostState = Schemas['BlogPostState'];
+export type BlogCategoryRef = Schemas['BlogCategoryRef'];
+export type BlogAuthorRef = Schemas['BlogAuthorRef'];
+export type AdminBlogCategory = Schemas['AdminBlogCategoryResponse'];
+export type AdminBlogCategoryList = Schemas['AdminBlogCategoryListResponse'];
+export type SaveBlogCategoryRequest = Schemas['SaveBlogCategoryRequest'];
+export type AdminBlogPostListItem = Schemas['AdminBlogPostListItem'];
+export type AdminBlogPost = Schemas['AdminBlogPostResponse'];
+export type SaveBlogPostRequest = Schemas['SaveBlogPostRequest'];
+export type PublishBlogPostRequest = Schemas['PublishBlogPostRequest'];
+export type UnpublishBlogPostRequest = Schemas['UnpublishBlogPostRequest'];
+export type BlogImageRequest = Schemas['BlogImageRequest'];
+
+export type CmsPageKey = 'home' | 'about' | 'privacy' | 'terms' | 'delivery';
+export type CmsPageSummary = Schemas['CmsPageSummary'];
+export type CmsPageList = Schemas['CmsPageListResponse'];
+export type CmsImage = Schemas['CmsImage'];
+export type CmsImageInput = Schemas['CmsImageInput'];
+export type CmsTextSection = Schemas['CmsTextSection'];
+export type CmsTextSectionInput = Schemas['CmsTextSectionInput'];
+export type HomeHero = Schemas['HomeHero'];
+export type HomeStory = Schemas['HomeStory'];
+export type HomeWhyUs = Schemas['HomeWhyUs'];
+export type HomeWhyUsItem = Schemas['HomeWhyUsItem'];
+export type HomePageContent = Schemas['HomePageContent'];
+export type HomePageContentInput = Schemas['HomePageContentInput'];
+export type AboutPageContent = Schemas['AboutPageContent'];
+export type AboutPageContentInput = Schemas['AboutPageContentInput'];
+export type RichTextPageContent = Schemas['RichTextPageContent'];
+export type RichTextPageContentInput = Schemas['RichTextPageContentInput'];
+export type AdminHomePage = Schemas['AdminHomePageResponse'];
+export type AdminAboutPage = Schemas['AdminAboutPageResponse'];
+export type AdminRichTextPage = Schemas['AdminRichTextPageResponse'];
+export type SaveHomePageRequest = Schemas['SaveHomePageRequest'];
+export type SaveAboutPageRequest = Schemas['SaveAboutPageRequest'];
+export type SaveRichTextPageRequest = Schemas['SaveRichTextPageRequest'];
+/** Public CMS pages (`GET /content/pages/{key}`, 404 while the page is empty). */
+export type HomePage = Schemas['HomePageResponse'];
+export type AboutPage = Schemas['AboutPageResponse'];
+export type RichTextPage = Schemas['RichTextPageResponse'];
+
+export type AdminFaqItem = Schemas['AdminFaqItemResponse'];
+export type AdminFaqList = Schemas['AdminFaqListResponse'];
+export type SaveFaqItemRequest = Schemas['SaveFaqItemRequest'];
+export type ReorderFaqRequest = Schemas['ReorderFaqRequest'];
+export type AdminTestimonial = Schemas['AdminTestimonialResponse'];
+export type AdminTestimonialList = Schemas['AdminTestimonialListResponse'];
+export type SaveTestimonialRequest = Schemas['SaveTestimonialRequest'];
+
+export type NewsletterSubscriberStatus = Schemas['NewsletterSubscriberStatus'];
+export type AdminSubscriber = Schemas['AdminSubscriberItem'];
+export type AdminSubscriberList = Schemas['AdminSubscriberListResponse'];
+
+export type AdminContactMessage = Schemas['AdminContactMessageItem'];
+export type AdminContactMessageList = Schemas['AdminContactMessageListResponse'];
+
+export type StoreLogo = Schemas['StoreLogo'];
+
+export type AdminUser = Schemas['AdminUserResponse'];
+export type AdminUserList = Schemas['AdminUserListResponse'];
+export type InviteAdminRequest = Schemas['InviteAdminRequest'];
+export type UpdateAdminRequest = Schemas['UpdateAdminRequest'];
+
+export type AuditLogItem = Schemas['AuditLogItem'];
+export type AuditFilterOption = Schemas['AuditFilterOption'];
+export type AuditLogFilters = Schemas['AuditLogFiltersResponse'];
+
+/** Public content for the storefront (Phase 7). */
+export type PublicBlogCategory = Schemas['PublicBlogCategory'];
+export type PublicBlogCategoryList = Schemas['PublicBlogCategoryListResponse'];
+export type PublicBlogCategoryRef = Schemas['PublicBlogCategoryRef'];
+export type PublicBlogPostListItem = Schemas['PublicBlogPostListItem'];
+export type PublicBlogPost = Schemas['PublicBlogPostResponse'];
+export type LatestBlogPosts = Schemas['LatestBlogPostsResponse'];
+export type PublicFaqItem = Schemas['PublicFaqItem'];
+export type PublicFaq = Schemas['PublicFaqResponse'];
+export type PublicTestimonial = Schemas['PublicTestimonial'];
+export type PublicTestimonials = Schemas['PublicTestimonialsResponse'];
+export type NewsletterSubscribeRequest = Schemas['NewsletterSubscribeRequest'];
+export type NewsletterTokenRequest = Schemas['NewsletterTokenRequest'];
+export type NewsletterStatus = Schemas['NewsletterStatusResponse'];
+export type ContactRequest = Schemas['ContactRequest'];
+export type FormAccepted = Schemas['FormAcceptedResponse'];

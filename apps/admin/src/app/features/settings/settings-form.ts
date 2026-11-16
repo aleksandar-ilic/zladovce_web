@@ -76,6 +76,11 @@ export function createSettingsForm(fb: FormBuilder) {
       notBlank,
       Validators.maxLength(100),
     ]),
+    /**
+     * Store logo, sent as `logoKey` (required member): the current key keeps the logo, null
+     * removes it, an upload key (purpose `logo`) replaces it.
+     */
+    logoKey: fb.control<string | null>(null),
     contactEmail: fb.nonNullable.control('', [emailAddressValidator]),
     phone: fb.nonNullable.control('', [Validators.maxLength(50)]),
     businessAddress: fb.nonNullable.control('', [Validators.maxLength(300)]),
@@ -141,6 +146,7 @@ export function fillSettingsForm(
   }
   form.reset({
     storeName: settings.storeName,
+    logoKey: settings.logoKey,
     contactEmail: settings.contactEmail ?? '',
     phone: settings.phone ?? '',
     businessAddress: settings.businessAddress ?? '',
@@ -173,6 +179,7 @@ export function settingsRequest(form: SettingsForm, version: number): UpdateStor
   return {
     version,
     storeName: v.storeName.trim(),
+    logoKey: v.logoKey,
     contactEmail: text(v.contactEmail),
     phone: text(v.phone),
     businessAddress: text(v.businessAddress),
