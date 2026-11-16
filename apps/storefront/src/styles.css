@@ -10,8 +10,9 @@
 @source '../../../libs';
 
 @layer components {
-  /* Product descriptions: the API keeps only p, br, strong, em, u, s, ul, ol, li, h2–h4,
-     blockquote, a and hr, so only those are styled. */
+  /* Product descriptions, blog posts and CMS pages: the API keeps only p, br, strong, em, u, s,
+     ul, ol, li, h2–h4, blockquote, a, hr and – for blog and pages – figure, figcaption and img
+     from the media bucket, so only those are styled. */
   .rich-text {
     color: var(--color-ink-700);
     font-size: var(--text-lg);
@@ -81,6 +82,29 @@
 
   .rich-text hr {
     border-color: var(--color-cream-200);
+  }
+
+  .rich-text img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-lg);
+  }
+
+  .rich-text figure {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .rich-text figcaption {
+    margin-top: 0.5rem;
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    color: var(--color-ink-700);
+  }
+
+  /* Long words and URLs in owner-written text must never widen the page. */
+  .rich-text {
+    overflow-wrap: anywhere;
   }
 
   /* Subtle entrance motion only (disabled by prefers-reduced-motion in base.css). */

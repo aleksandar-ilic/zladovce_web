@@ -4,7 +4,23 @@
  */
 
 /** Pages that exist without catalog data and are always prerendered. */
-export const STATIC_PATHS = ['/', '/prodavnica'];
+export const STATIC_PATHS = ['/', '/prodavnica', '/kontakt'];
+
+/** Blog list; in the sitemap only while at least one post was prerendered. */
+export const BLOG_PATH = '/blog';
+
+/**
+ * Informational pages (apps/storefront core/navigation.ts INFO_PAGES; a test keeps both in
+ * line). `key` is the CMS page key of `GET /seo/routes` → `pages` (lastmod), `faq` has none.
+ * They are prerendered only with content, so the sitemap lists those whose folder exists.
+ */
+export const INFO_PAGES = [
+  { slug: 'o-nama', key: 'about' },
+  { slug: 'cesta-pitanja', key: 'faq' },
+  { slug: 'dostava-i-placanje', key: 'delivery' },
+  { slug: 'politika-privatnosti', key: 'privacy' },
+  { slug: 'uslovi-koriscenja', key: 'terms' },
+];
 
 /** Client-only pages that must not be crawled (and are never in the sitemap). */
 export const DISALLOWED_PATHS = [
@@ -13,6 +29,7 @@ export const DISALLOWED_PATHS = [
   '/porudzbina-primljena',
   '/track-order',
   '/pracenje-porudzbine',
+  '/newsletter/',
 ];
 
 export const DEFAULT_SITE_URL = 'http://localhost:4200';
@@ -41,14 +58,45 @@ export function toLastmod(value) {
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString().slice(0, 10);
 }
 
+/** The latest of several timestamps, as a sitemap date. */
+function latest(values) {
+  const dates = values
+    .map((value) => toLastmod(value))
+    .filter((value) => value !== undefined)
+    .sort();
+  return dates[dates.length - 1];
+}
+
 /**
- * Sitemap entries: the static pages, then every prerendered category and product page (sorted),
- * with `lastmod` from `GET /seo/routes` when it was available.
+ * Sitemap entries: the static pages, the informational pages with content, the blog (list,
+ * categories, posts) and every prerendered category and product page (sorted), with `lastmod`
+ * from `GET /seo/routes` when it was available.
  */
-export function sitemapEntries({ categories = [], products = [], updatedAt = {} } = {}) {
+export function sitemapEntries({
+  categories = [],
+  products = [],
+  blogPosts = [],
+  blogCategories = [],
+  infoPages = [],
+  updatedAt = {},
+} = {}) {
   const lastmod = (kind, slug) => toLastmod(updatedAt[kind]?.[slug]);
+  const sorted = (values) => [...new Set(values)].sort();
+  const info = INFO_PAGES.filter((page) => infoPages.includes(page.slug));
   return [
     ...STATIC_PATHS.map((path) => ({ path })),
+    ...info.map((page) => ({ path: `/${page.slug}`, lastmod: lastmod('pages', page.key) })),
+    ...(blogPosts.length > 0
+      ? [{ path: BLOG_PATH, lastmod: latest(blogPosts.map((slug) => updatedAt.blogPosts?.[slug])) }]
+      : []),
+    ...sorted(blogCategories).map((slug) => ({
+      path: `${BLOG_PATH}/kategorija/${slug}`,
+      lastmod: lastmod('blogCategories', slug),
+    })),
+    ...sorted(blogPosts).map((slug) => ({
+      path: `${BLOG_PATH}/${slug}`,
+      lastmod: lastmod('blogPosts', slug),
+    })),
     ...[...new Set(categories)]
       .sort()
       .map((slug) => ({ path: `/prodavnica/${slug}`, lastmod: lastmod('categories', slug) })),
@@ -87,13 +135,22 @@ export function buildRobots(siteUrl, disallow = DISALLOWED_PATHS) {
   ].join('\n');
 }
 
-/** `{ categories: [{ slug, updatedAt }], … }` → `{ categories: { slug: updatedAt }, … }`. */
+/**
+ * `{ categories: [{ slug, updatedAt }], …, pages: [{ key, updatedAt }] }` →
+ * `{ categories: { slug: updatedAt }, …, pages: { key: updatedAt } }`.
+ */
 export function updatedAtBySlug(routes) {
-  const index = (items) =>
+  const index = (items, field = 'slug') =>
     Object.fromEntries(
       (Array.isArray(items) ? items : [])
-        .filter((item) => item && typeof item.slug === 'string')
-        .map((item) => [item.slug, item.updatedAt]),
+        .filter((item) => item && typeof item[field] === 'string')
+        .map((item) => [item[field], item.updatedAt]),
     );
-  return { categories: index(routes?.categories), products: index(routes?.products) };
+  return {
+    categories: index(routes?.categories),
+    products: index(routes?.products),
+    blogPosts: index(routes?.blogPosts),
+    blogCategories: index(routes?.blogCategories),
+    pages: index(routes?.pages, 'key'),
+  };
 }

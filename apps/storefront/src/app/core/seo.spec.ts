@@ -5,12 +5,14 @@ import {
   buildRobots,
   buildSitemap,
   DISALLOWED_PATHS,
+  INFO_PAGES as SITEMAP_INFO_PAGES,
   normaliseSiteUrl,
   sitemapEntries,
   updatedAtBySlug,
 } from '../../../../../tools/seo-files.mjs';
-import { PRODUCT, SITE, testProviders, VARIANT_370 } from '../testing/fixtures';
-import { fetchSeoRoutes, FetchLike } from './prerender';
+import { PRODUCT, SITE, STORE, testProviders, VARIANT_370 } from '../testing/fixtures';
+import { INFO_PAGES } from './navigation';
+import { fetchBuildJson, fetchSeoRoutes, FetchLike, infoPageSlugs } from './prerender';
 import { SeoService, serializeJsonLd } from './seo';
 import { normaliseSiteUrl as normaliseAppSiteUrl } from './site-url';
 import {
@@ -199,6 +201,68 @@ describe('prerender params', () => {
     });
     expect(warn.mock.calls[2]![0]).toContain('returned no products');
   });
+
+  it('returns blog posts, blog categories and CMS pages with content', async () => {
+    const routes = await fetchSeoRoutes('http://api', {
+      warn: vi.fn(),
+      fetchFn: ok({
+        categories: [],
+        products: [{ slug: 'p', updatedAt: 'x' }],
+        blogPosts: [
+          { slug: 'kako-kuvamo-dzem', updatedAt: 'x' },
+          { slug: 'kategorija', updatedAt: 'x' },
+          { slug: '../x', updatedAt: 'x' },
+        ],
+        blogCategories: [{ slug: 'recepti', updatedAt: 'x' }],
+        pages: [
+          { key: 'about', updatedAt: 'x' },
+          { key: 'terms', updatedAt: 'x' },
+          { key: '../evil', updatedAt: 'x' },
+        ],
+      }),
+    });
+    expect(routes.blogPosts).toEqual([{ slug: 'kako-kuvamo-dzem', updatedAt: 'x' }]);
+    expect(routes.blogCategories).toEqual([{ slug: 'recepti', updatedAt: 'x' }]);
+    expect(routes.pages.map((p) => p.key)).toEqual(['about', 'terms']);
+  });
+
+  it('prerenders only the informational pages with content', () => {
+    const routes = {
+      categories: [],
+      products: [],
+      blogPosts: [],
+      blogCategories: [],
+      pages: [
+        { key: 'about', updatedAt: 'x' },
+        { key: 'privacy', updatedAt: 'x' },
+        { key: 'home', updatedAt: 'x' },
+      ],
+    };
+    expect(infoPageSlugs({ routes, faqCount: 0, shipping: STORE.shipping })).toEqual([
+      'o-nama',
+      'politika-privatnosti',
+    ]);
+    expect(
+      infoPageSlugs({
+        routes: { ...routes, pages: [] },
+        faqCount: 2,
+        shipping: { ...STORE.shipping, price: 350 },
+      }),
+    ).toEqual(['cesta-pitanja', 'dostava-i-placanje']);
+    expect(
+      infoPageSlugs({ routes: { ...routes, pages: [] }, faqCount: 0, shipping: null }),
+    ).toEqual([]);
+  });
+
+  it('reads FAQ and store at build time without throwing when the API is down', async () => {
+    const warn = vi.fn();
+    const down: FetchLike = () => Promise.reject(new TypeError('fetch failed'));
+    expect(await fetchBuildJson('http://api', '/content/faq', { fetchFn: down, warn })).toBeNull();
+    expect(warn.mock.calls[0]![0]).toContain('http://api/content/faq');
+    expect(
+      await fetchBuildJson('http://api/', '/store', { fetchFn: ok({ storeName: 'Z' }), warn }),
+    ).toEqual({ storeName: 'Z' });
+  });
 });
 
 describe('sitemap.xml and robots.txt', () => {
@@ -215,6 +279,7 @@ describe('sitemap.xml and robots.txt', () => {
     expect(entries).toEqual([
       { path: '/' },
       { path: '/prodavnica' },
+      { path: '/kontakt' },
       { path: '/prodavnica/dzemovi', lastmod: undefined },
       { path: '/prodavnica/sokovi', lastmod: '2026-11-10' },
       { path: '/proizvod/sok-od-jabuke', lastmod: '2026-11-12' },
@@ -225,7 +290,7 @@ describe('sitemap.xml and robots.txt', () => {
     expect(xml).toContain(
       '<loc>https://zladovce.com/proizvod/sok-od-jabuke</loc>\n    <lastmod>2026-11-12</lastmod>',
     );
-    expect(xml.match(/<url>/g)?.length).toBe(5);
+    expect(xml.match(/<url>/g)?.length).toBe(6);
     expect(xml).not.toContain('/korpa');
     expect(xml).not.toContain('/porucivanje');
   });
@@ -237,9 +302,50 @@ describe('sitemap.xml and robots.txt', () => {
     expect(normaliseSiteUrl('')).toBe('http://localhost:4200');
   });
 
-  it('robots.txt disallows cart, checkout, confirmation and tracking and points to the sitemap', () => {
+  it('robots.txt disallows cart, checkout, confirmation, tracking and the newsletter pages', () => {
     expect(buildRobots('https://zladovce.com')).toBe(
-      'User-agent: *\nDisallow: /korpa\nDisallow: /porucivanje\nDisallow: /porudzbina-primljena\nDisallow: /track-order\nDisallow: /pracenje-porudzbine\n\nSitemap: https://zladovce.com/sitemap.xml\n',
+      'User-agent: *\nDisallow: /korpa\nDisallow: /porucivanje\nDisallow: /porudzbina-primljena\nDisallow: /track-order\nDisallow: /pracenje-porudzbine\nDisallow: /newsletter/\n\nSitemap: https://zladovce.com/sitemap.xml\n',
+    );
+  });
+
+  it('lists blog posts, blog categories and informational pages with lastmod', () => {
+    const updatedAt = updatedAtBySlug({
+      blogPosts: [
+        { slug: 'kako-kuvamo-dzem', updatedAt: '2026-11-15T10:00:00Z' },
+        { slug: 'zimnica', updatedAt: '2026-11-01T10:00:00Z' },
+      ],
+      blogCategories: [{ slug: 'recepti', updatedAt: '2026-11-15T10:00:00Z' }],
+      pages: [
+        { key: 'about', updatedAt: '2026-11-14T09:00:00Z' },
+        { key: 'terms', updatedAt: '2026-11-13T09:00:00Z' },
+      ],
+    });
+    const entries = sitemapEntries({
+      blogPosts: ['zimnica', 'kako-kuvamo-dzem'],
+      blogCategories: ['recepti'],
+      infoPages: ['uslovi-koriscenja', 'o-nama', 'cesta-pitanja'],
+      updatedAt,
+    });
+    expect(entries).toEqual([
+      { path: '/' },
+      { path: '/prodavnica' },
+      { path: '/kontakt' },
+      { path: '/o-nama', lastmod: '2026-11-14' },
+      { path: '/cesta-pitanja', lastmod: undefined },
+      { path: '/uslovi-koriscenja', lastmod: '2026-11-13' },
+      { path: '/blog', lastmod: '2026-11-15' },
+      { path: '/blog/kategorija/recepti', lastmod: '2026-11-15' },
+      { path: '/blog/kako-kuvamo-dzem', lastmod: '2026-11-15' },
+      { path: '/blog/zimnica', lastmod: '2026-11-01' },
+    ]);
+    // Without posts the blog list is not in the sitemap (an empty blog is not worth indexing).
+    expect(sitemapEntries({}).map((e) => e.path)).not.toContain('/blog');
+  });
+
+  it('keeps INFO_PAGES of the sitemap tool in line with the navigation config', () => {
+    expect(SITEMAP_INFO_PAGES.map((page) => page.slug)).toEqual(INFO_PAGES.map((p) => p.slug));
+    expect(SITEMAP_INFO_PAGES.map((page) => page.key)).toEqual(
+      INFO_PAGES.map((p) => p.cmsKey ?? 'faq'),
     );
   });
 
@@ -248,5 +354,6 @@ describe('sitemap.xml and robots.txt', () => {
     for (const path of DISALLOWED_PATHS) {
       expect(xml).not.toContain(path);
     }
+    expect(DISALLOWED_PATHS).toContain('/newsletter/');
   });
 });

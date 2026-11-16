@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { PrerenderFallback, RenderMode, ServerRoute } from '@angular/ssr';
 import { APP_CONFIG } from '@zladovce/api';
-import { seoRoutesOnce } from './core/prerender';
+import { infoPageSlugsOnce, seoRoutesOnce } from './core/prerender';
 
 /**
  * Render mode per route (PROJECT_SPECIFICATION.md P1.3). The build uses `outputMode: "static"`
@@ -16,6 +16,11 @@ import { seoRoutesOnce } from './core/prerender';
  * `ZLADOVCE_API_BASE_URL` at build time (core/prerender.ts). When the API cannot be reached the
  * build still succeeds with the static pages only. A slug created after the build is rendered in
  * the browser (`PrerenderFallback.Client`; the host rewrites unknown paths to index.csr.html).
+ *
+ * Phase 7: `/kontakt` and `/blog` are always prerendered; blog posts and blog categories for
+ * every slug of `GET /seo/routes`; the informational pages (`:page`) only when they have
+ * content (CMS pages of `/seo/routes`, FAQ items, delivery facts of `/store`). The newsletter
+ * confirmation pages are client only.
  *
  * Paths here must match app.routes.ts (no leading slash). Add specific routes above the
  * catch-all; anything not listed is rendered in the browser.
@@ -39,6 +44,37 @@ export const serverRoutes: ServerRoute[] = [
     async getPrerenderParams() {
       const routes = await seoRoutesOnce(inject(APP_CONFIG).apiBaseUrl);
       return routes.products.map((route) => ({ slug: route.slug }));
+    },
+  },
+  { path: 'kontakt', renderMode: RenderMode.Prerender },
+  { path: 'blog', renderMode: RenderMode.Prerender },
+  {
+    path: 'blog/kategorija/:categorySlug',
+    renderMode: RenderMode.Prerender,
+    fallback: PrerenderFallback.Client,
+    async getPrerenderParams() {
+      const routes = await seoRoutesOnce(inject(APP_CONFIG).apiBaseUrl);
+      return routes.blogCategories.map((route) => ({ categorySlug: route.slug }));
+    },
+  },
+  {
+    path: 'blog/:slug',
+    renderMode: RenderMode.Prerender,
+    fallback: PrerenderFallback.Client,
+    async getPrerenderParams() {
+      const routes = await seoRoutesOnce(inject(APP_CONFIG).apiBaseUrl);
+      return routes.blogPosts.map((route) => ({ slug: route.slug }));
+    },
+  },
+  { path: 'newsletter/potvrda', renderMode: RenderMode.Client },
+  { path: 'newsletter/odjava', renderMode: RenderMode.Client },
+  {
+    path: ':page',
+    renderMode: RenderMode.Prerender,
+    fallback: PrerenderFallback.Client,
+    async getPrerenderParams() {
+      const slugs = await infoPageSlugsOnce(inject(APP_CONFIG).apiBaseUrl);
+      return slugs.map((page) => ({ page }));
     },
   },
   { path: 'korpa', renderMode: RenderMode.Client },

@@ -10,66 +10,71 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { asApiError } from '@zladovce/api';
-import { PublicProductListItem, PublicStoreShipping } from '@zladovce/models';
+import {
+  HomePage as HomePageResponse,
+  PublicBlogPostListItem,
+  PublicProductListItem,
+  PublicTestimonial,
+} from '@zladovce/models';
 import { UiButton, UiErrorState, UiLoadingState } from '@zladovce/ui';
-import { formatRsd } from '@zladovce/utilities';
-import { catchError, concat, EMPTY, map, of, Subject, switchMap } from 'rxjs';
+import {
+  catchError,
+  concat,
+  distinctUntilChanged,
+  EMPTY,
+  map,
+  of,
+  Subject,
+  switchMap,
+} from 'rxjs';
 import { CatalogApi } from '../../core/data/catalog-api';
 import { CategoriesStore } from '../../core/data/categories-store';
+import { ContentApi } from '../../core/data/content-api';
+import { cachedThenFresh } from '../../core/data/hydration';
+import { SiteContent } from '../../core/data/site-content';
 import { LOADING, Remote } from '../../core/data/remote';
 import { StoreSettings } from '../../core/data/store-settings';
+import { BLOG_PATH } from '../../core/navigation';
+import { HOME_DESCRIPTION, HOME_TITLE, SeoService } from '../../core/seo';
+import { BlogCard } from '../../shared/blog-card';
+import { deliveryFacts, TextItem } from '../../shared/delivery-facts';
+import { NewsletterSignup } from '../../shared/newsletter-signup';
 import { ProductCard } from '../../shared/product-card';
 import { ProductImage } from '../../shared/product-image';
 import { productCountLabel } from '../shop/shop-query';
+import { homeView } from './home-content';
 
-interface TextItem {
-  title: string;
-  text: string;
-}
+export { deliveryFacts } from '../../shared/delivery-facts';
 
 export const FEATURED_LIMIT = 4;
 export const BESTSELLER_LIMIT = 4;
-
-/** Delivery facts from the store settings; only values that are actually configured. */
-export function deliveryFacts(shipping: PublicStoreShipping | null): TextItem[] {
-  if (!shipping || !shipping.enabled) {
-    return [];
-  }
-  const facts: TextItem[] = [];
-  if (shipping.price > 0) {
-    facts.push({ title: 'Cena dostave', text: formatRsd(shipping.price) });
-  }
-  if (shipping.freeShippingThreshold !== null && shipping.freeShippingThreshold > 0) {
-    facts.push({
-      title: 'Besplatna dostava',
-      text: `Za porudžbine od ${formatRsd(shipping.freeShippingThreshold)}`,
-    });
-  }
-  if (shipping.minOrderAmount !== null && shipping.minOrderAmount > 0) {
-    facts.push({ title: 'Najmanja porudžbina', text: formatRsd(shipping.minOrderAmount) });
-  }
-  if (shipping.estimatedDeliveryText?.trim()) {
-    facts.push({ title: 'Rok isporuke', text: shipping.estimatedDeliveryText.trim() });
-  }
-  if (shipping.deliveryInfo?.trim()) {
-    facts.push({ title: 'Napomena', text: shipping.deliveryInfo.trim() });
-  }
-  return facts;
-}
+export const BLOG_PREVIEW_LIMIT = 3;
 
 /**
- * Homepage: hero, featured categories and products (real data), the family story, why our
- * products, how ordering works and delivery facts from the store settings.
+ * Homepage: hero, introduction, featured categories and products (real data), the family
+ * story, why our products, quality, testimonials, how ordering works with the delivery facts,
+ * blog previews and the newsletter sign-up.
  *
- * The copy states only what is known (family business from the south of Serbia, what is made,
- * cash on delivery, no account needed); no certificates, awards, ingredients or "organski".
- * Testimonials, blog previews and the newsletter come with their backend (Phase 7).
+ * Texts and images come from the CMS homepage (`GET /content/pages/home`) where the owner has
+ * entered them; every section without CMS content keeps the honest default copy (home-content.ts).
+ * Introduction and quality exist only with CMS text; testimonials and blog previews only when
+ * there are real ones.
  */
 @Component({
   selector: 'sf-home-page',
-  imports: [RouterLink, UiButton, UiErrorState, UiLoadingState, ProductCard, ProductImage],
+  imports: [
+    RouterLink,
+    UiButton,
+    UiErrorState,
+    UiLoadingState,
+    BlogCard,
+    NewsletterSignup,
+    ProductCard,
+    ProductImage,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    @let v = view();
     <!-- Hero -->
     <section class="overflow-hidden bg-cream-100" aria-labelledby="hero-naslov">
       <div
@@ -77,22 +82,41 @@ export function deliveryFacts(shipping: PublicStoreShipping | null): TextItem[] 
       >
         <div>
           <p class="eyebrow">Porodični posao sa juga Srbije</p>
-          <h1 id="hero-naslov" class="mt-4 text-display">
-            Domaći ukusi, pripremljeni kao za svoju kuću
+          <h1 id="hero-naslov" class="mt-4 text-display" data-testid="hero-title">
+            {{ v.hero.title }}
           </h1>
-          <p class="mt-6 max-w-prose text-lg text-ink-700">
-            Zladovce je porodični posao sa juga Srbije. Pravimo domaće džemove, voćne sokove, sirće
-            i kompote i šaljemo ih na adrese širom zemlje.
+          <p
+            class="mt-6 max-w-prose whitespace-pre-line text-lg text-ink-700"
+            data-testid="hero-subtitle"
+          >
+            {{ v.hero.subtitle }}
           </p>
           <div class="mt-9 flex flex-wrap gap-3">
-            <a uiButton size="lg" routerLink="/prodavnica">Pogledajte ponudu</a>
-            <a uiButton size="lg" variant="secondary" routerLink="/" fragment="porucivanje"
-              >Kako se poručuje</a
+            <a uiButton size="lg" routerLink="/prodavnica" data-testid="hero-primary">{{
+              v.hero.primaryCtaLabel
+            }}</a>
+            <a
+              uiButton
+              size="lg"
+              variant="secondary"
+              routerLink="/"
+              fragment="porucivanje"
+              data-testid="hero-secondary"
+              >{{ v.hero.secondaryCtaLabel }}</a
             >
           </div>
         </div>
 
-        @if (heroImages().length > 0) {
+        @if (v.hero.image; as image) {
+          <sf-product-image
+            class="aspect-[4/5] rounded-xl shadow-card md:aspect-[4/5]"
+            [image]="image"
+            [alt]="image.alt || ''"
+            sizes="(min-width: 768px) 45vw, 92vw"
+            priority
+            data-testid="hero-image"
+          />
+        } @else if (heroImages().length > 0) {
           <div class="grid grid-cols-[1.4fr_1fr] gap-4" data-testid="hero-photos">
             @for (product of heroImages(); track product.id; let i = $index) {
               <a
@@ -133,6 +157,25 @@ export function deliveryFacts(shipping: PublicStoreShipping | null): TextItem[] 
         }
       </div>
     </section>
+
+    <!-- Introduction (CMS only) -->
+    @if (v.intro; as intro) {
+      <section
+        class="mx-auto max-w-page px-gutter pt-section"
+        [attr.aria-labelledby]="intro.title ? 'uvod-naslov' : null"
+        [attr.aria-label]="intro.title ? null : 'Uvod'"
+        data-testid="home-intro"
+      >
+        <div class="mx-auto max-w-3xl text-center">
+          @if (intro.title) {
+            <h2 id="uvod-naslov" class="text-3xl md:text-4xl">{{ intro.title }}</h2>
+          }
+          @for (paragraph of intro.paragraphs; track $index) {
+            <p class="mt-5 whitespace-pre-line text-lg text-ink-700">{{ paragraph }}</p>
+          }
+        </div>
+      </section>
+    }
 
     <!-- Featured categories -->
     @if (showCategories()) {
@@ -280,17 +323,28 @@ export function deliveryFacts(shipping: PublicStoreShipping | null): TextItem[] 
       >
         <div>
           <p class="eyebrow">O nama</p>
-          <h2 id="o-nama-naslov" class="mt-3 text-3xl md:text-4xl">Porodica iza svake tegle</h2>
+          <h2 id="o-nama-naslov" class="mt-3 text-3xl md:text-4xl" data-testid="story-title">
+            {{ v.story.title }}
+          </h2>
+          @if (v.story.image; as image) {
+            <sf-product-image
+              class="mt-8 aspect-[4/3] rounded-xl shadow-soft"
+              [image]="image"
+              [alt]="image.alt || ''"
+              sizes="(min-width: 768px) 40vw, 92vw"
+              data-testid="story-image"
+            />
+          }
         </div>
-        <div class="max-w-prose">
-          <p class="text-lg text-ink-700">
-            Iza imena Zladovce stoji jedna porodica i njena kuhinja. Proizvode pripremamo sami,
-            onako kako ih pravimo i za svoju trpezu.
-          </p>
-          <p class="mt-4 text-ink-700">
-            Ono što pravimo kod kuće sada šaljemo i vama – u teglama i flašama, spakovano tako da
-            stigne čitavo na vašu adresu.
-          </p>
+        <div class="max-w-prose" data-testid="story-text">
+          @for (paragraph of v.story.paragraphs; track $index; let first = $first) {
+            <p
+              class="whitespace-pre-line text-ink-700"
+              [class]="first ? 'text-lg' : 'mt-4'"
+            >
+              {{ paragraph }}
+            </p>
+          }
         </div>
       </div>
     </section>
@@ -299,19 +353,80 @@ export function deliveryFacts(shipping: PublicStoreShipping | null): TextItem[] 
     <section class="bg-sage-50" aria-labelledby="zasto-naslov">
       <div class="mx-auto max-w-page px-gutter py-section">
         <p class="eyebrow">Zašto naši proizvodi</p>
-        <h2 id="zasto-naslov" class="mt-3 max-w-2xl text-3xl md:text-4xl">
-          Domaće, jednostavno i bez iznenađenja
+        <h2 id="zasto-naslov" class="mt-3 max-w-2xl text-3xl md:text-4xl" data-testid="why-title">
+          {{ v.whyUs.title }}
         </h2>
-        <ul class="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          @for (reason of reasons; track reason.title) {
+        <ul class="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4" data-testid="why-items">
+          @for (reason of v.whyUs.items; track $index) {
             <li class="border-t border-sage-300 pt-5">
               <h3 class="text-xl">{{ reason.title }}</h3>
-              <p class="mt-2 text-ink-700">{{ reason.text }}</p>
+              @if (reason.text) {
+                <p class="mt-2 whitespace-pre-line text-ink-700">{{ reason.text }}</p>
+              }
             </li>
           }
         </ul>
       </div>
     </section>
+
+    <!-- Quality (CMS only) -->
+    @if (v.quality; as quality) {
+      <section
+        class="mx-auto max-w-page px-gutter py-section"
+        [attr.aria-labelledby]="quality.title ? 'kvalitet-naslov' : null"
+        [attr.aria-label]="quality.title ? null : 'Kvalitet'"
+        data-testid="home-quality"
+      >
+        <div class="grid gap-8 md:grid-cols-[1fr_1.2fr] md:gap-16">
+          <div>
+            <p class="eyebrow">Kvalitet</p>
+            @if (quality.title) {
+              <h2 id="kvalitet-naslov" class="mt-3 text-3xl md:text-4xl">{{ quality.title }}</h2>
+            }
+          </div>
+          <div class="max-w-prose">
+            @for (paragraph of quality.paragraphs; track $index; let first = $first) {
+              <p class="whitespace-pre-line text-ink-700" [class]="first ? 'text-lg' : 'mt-4'">
+                {{ paragraph }}
+              </p>
+            }
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- Testimonials: only real ones entered by the owner -->
+    @if (testimonials().length > 0) {
+      <section
+        class="border-y border-cream-200 bg-white"
+        aria-labelledby="utisci-naslov"
+        data-testid="home-testimonials"
+      >
+        <div class="mx-auto max-w-page px-gutter py-section">
+          <p class="eyebrow">Utisci</p>
+          <h2 id="utisci-naslov" class="mt-3 text-3xl md:text-4xl">Šta kažu kupci</h2>
+          <ul class="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            @for (item of testimonials(); track item.id) {
+              <li>
+                <figure class="flex h-full flex-col rounded-lg bg-cream-50 p-6 shadow-soft">
+                  <blockquote
+                    class="flex-1 whitespace-pre-line font-serif text-xl leading-relaxed text-olive-900"
+                  >
+                    „{{ item.text }}“
+                  </blockquote>
+                  <figcaption class="mt-5 text-sm text-ink-700">
+                    <span class="font-semibold text-ink-900">{{ item.authorName }}</span>
+                    @if (item.place) {
+                      <span>, {{ item.place }}</span>
+                    }
+                  </figcaption>
+                </figure>
+              </li>
+            }
+          </ul>
+        </div>
+      </section>
+    }
 
     <!-- How to order -->
     <section
@@ -349,7 +464,7 @@ export function deliveryFacts(shipping: PublicStoreShipping | null): TextItem[] 
               @for (fact of delivery(); track fact.title) {
                 <div>
                   <dt class="text-sm font-semibold text-ink-900">{{ fact.title }}</dt>
-                  <dd class="mt-1 text-ink-700">{{ fact.text }}</dd>
+                  <dd class="mt-1 whitespace-pre-line text-ink-700">{{ fact.text }}</dd>
                 </div>
               }
             </dl>
@@ -357,40 +472,73 @@ export function deliveryFacts(shipping: PublicStoreShipping | null): TextItem[] 
         }
       </div>
     </section>
+
+    <!-- Blog previews: only when posts are published -->
+    @if (posts().length > 0) {
+      <section
+        class="mx-auto max-w-page px-gutter py-section"
+        aria-labelledby="blog-naslov"
+        data-testid="home-blog"
+      >
+        <div class="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p class="eyebrow">Blog</p>
+            <h2 id="blog-naslov" class="mt-3 text-3xl md:text-4xl">Iz našeg bloga</h2>
+          </div>
+          <a
+            [routerLink]="blogPath"
+            class="font-semibold text-olive-800 underline underline-offset-4"
+            >Svi tekstovi →</a
+          >
+        </div>
+        <ul class="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          @for (post of posts(); track post.slug) {
+            <li><sf-blog-card [post]="post" /></li>
+          }
+        </ul>
+      </section>
+    }
+
+    <!-- Newsletter -->
+    <section
+      id="novosti"
+      class="scroll-mt-24 bg-sage-50"
+      aria-labelledby="novosti-naslov"
+      data-testid="home-newsletter"
+    >
+      <div
+        class="mx-auto grid max-w-page gap-8 px-gutter py-section md:grid-cols-[1fr_1.1fr] md:gap-16"
+      >
+        <div>
+          <p class="eyebrow">Novosti</p>
+          <h2 id="novosti-naslov" class="mt-3 text-3xl md:text-4xl">Javićemo vam šta je novo</h2>
+          <p class="mt-4 max-w-prose text-lg text-ink-700">
+            Ostavite adresu e-pošte i povremeno ćemo vam pisati o novim proizvodima i ponudi.
+          </p>
+        </div>
+        <sf-newsletter-signup />
+      </div>
+    </section>
   `,
 })
 export class HomePage {
   private readonly api = inject(CatalogApi);
+  private readonly content = inject(ContentApi);
   private readonly categoriesStore = inject(CategoriesStore);
   private readonly store = inject(StoreSettings);
+  private readonly seo = inject(SeoService);
+  private readonly siteContent = inject(SiteContent);
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly hydrating = this.browser && !inject(Router).navigated;
   private readonly featuredRetries = new Subject<void>();
+
+  protected readonly blogPath = BLOG_PATH;
 
   protected readonly productGroups: readonly TextItem[] = [
     { title: 'Džemovi', text: 'Za doručak, palačinke i kolače' },
     { title: 'Voćni sokovi', text: 'Za svaki dan i za goste' },
     { title: 'Sirće', text: 'Za salate i zimnicu' },
     { title: 'Kompoti', text: 'Voće iz tegle, tokom cele godine' },
-  ];
-
-  protected readonly reasons: readonly TextItem[] = [
-    {
-      title: 'Iz porodične kuhinje',
-      text: 'Pripremamo ih sami, na isti način na koji ih pravimo za svoju porodicu.',
-    },
-    {
-      title: 'Jasno na svakom proizvodu',
-      text: 'Pakovanje, cena i dostupnost piše na strani proizvoda pre nego što ga dodate u korpu.',
-    },
-    {
-      title: 'Plaćate kad stigne',
-      text: 'Nema plaćanja unapred: porudžbinu plaćate kuriru pri preuzimanju.',
-    },
-    {
-      title: 'Na adresu širom Srbije',
-      text: 'Paket šaljemo kurirskom službom na adresu koju navedete.',
-    },
   ];
 
   protected readonly steps: readonly TextItem[] = [
@@ -407,6 +555,12 @@ export class HomePage {
       text: 'Porudžbinu plaćate kuriru kada vam preda paket. Do tada je pratite kodom iz e-poruke potvrde.',
     },
   ];
+
+  /** The CMS homepage; null while it is empty (404), not loaded or unreachable. */
+  readonly page = signal<HomePageResponse | null>(null);
+  protected readonly view = computed(() => homeView(this.page()?.content));
+  protected readonly testimonials = signal<PublicTestimonial[]>([]);
+  protected readonly posts = signal<PublicBlogPostListItem[]>([]);
 
   protected readonly featured = signal<Remote<PublicProductListItem[]>>(LOADING);
   protected readonly categoriesRemote = this.categoriesStore.remote;
@@ -444,6 +598,46 @@ export class HomePage {
   constructor() {
     this.categoriesStore.ensureLoaded();
     this.store.ensureLoaded();
+
+    // CMS content, asked for only when `/seo/routes` lists the home page (an empty page is a
+    // 404, which the browser would log); unknown routes → ask anyway. A 404 or any failure keeps
+    // the default copy.
+    this.siteContent.routes$
+      .pipe(
+        map((routes) => (routes === null ? null : routes.pages.some((p) => p.key === 'home'))),
+        distinctUntilChanged(),
+        switchMap((hasContent, index) =>
+          hasContent === false
+            ? of(null)
+            : cachedThenFresh(
+                (options) => this.content.homePage(options),
+                index === 0 && this.hydrating,
+              ).pipe(
+                catchError((error: unknown) => (asApiError(error).isNotFound ? of(null) : EMPTY)),
+              ),
+        ),
+        takeUntilDestroyed(),
+      )
+      .subscribe((page) => {
+        this.page.set(page);
+        this.updateSeo(page);
+      });
+    cachedThenFresh((options) => this.content.testimonials(options), this.hydrating)
+      .pipe(
+        catchError(() => EMPTY),
+        takeUntilDestroyed(),
+      )
+      .subscribe((items) => this.testimonials.set(items));
+    cachedThenFresh(
+      (options) => this.content.latestPosts(BLOG_PREVIEW_LIMIT, options),
+      this.hydrating,
+    )
+      .pipe(
+        catchError(() => EMPTY),
+        takeUntilDestroyed(),
+      )
+      .subscribe((items) => this.posts.set(items));
+
     concat(of(undefined), this.featuredRetries)
       .pipe(
         switchMap((_, index) => {
@@ -497,5 +691,14 @@ export class HomePage {
 
   protected reloadCategories(): void {
     this.categoriesStore.reload();
+  }
+
+  /** The owner's SEO title and description replace the defaults of the route when set. */
+  private updateSeo(page: HomePageResponse | null): void {
+    this.seo.setPage({
+      title: page?.seoTitle?.trim() || HOME_TITLE,
+      description: page?.seoDescription?.trim() || HOME_DESCRIPTION,
+      path: '/',
+    });
   }
 }

@@ -22,13 +22,18 @@ export interface PageSeo {
   path: string;
   /** Absolute image URL for Open Graph. */
   image?: string | null;
-  type?: 'website' | 'product';
+  type?: 'website' | 'product' | 'article';
+  /** `article:published_time` / `article:modified_time` (ISO) for blog posts. */
+  publishedTime?: string | null;
+  modifiedTime?: string | null;
   noindex?: boolean;
   /** JSON-LD objects, each written as its own `<script type="application/ld+json">`. */
   jsonLd?: readonly object[];
 }
 
 export const SITE_NAME = 'Zladovce';
+
+export const HOME_TITLE = 'Zladovce – domaći džemovi, sokovi, sirće i kompoti';
 
 export const HOME_DESCRIPTION =
   'Zladovce – porodični posao sa juga Srbije. Domaći džemovi, voćni sokovi, sirće i kompoti, sa dostavom širom Srbije i plaćanjem pouzećem.';
@@ -108,6 +113,8 @@ export class SeoService {
     this.setProperty('og:description', page.description);
     this.setProperty('og:url', url);
     this.setProperty('og:image', page.image);
+    this.setProperty('article:published_time', page.publishedTime);
+    this.setProperty('article:modified_time', page.modifiedTime);
     this.setName('twitter:card', page.image ? 'summary_large_image' : 'summary');
     this.setJsonLd(page.jsonLd ?? []);
   }

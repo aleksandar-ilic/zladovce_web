@@ -3,9 +3,11 @@
  * Writes sitemap.xml and robots.txt into the storefront build output. Runs after
  * `ng build storefront` (npm run build:storefront).
  *
- * - The sitemap lists the static pages and every category/product page that was actually
- *   prerendered (folders in dist/storefront/browser), so it never points at a page that the
- *   build did not produce.
+ * - The sitemap lists the static pages and every category, product, blog post, blog category
+ *   and informational page (o-nama, cesta-pitanja, …) that was actually prerendered (folders in
+ *   dist/storefront/browser), so it never points at a page that the build did not produce
+ *   (informational pages without content are not prerendered).
+ * - robots.txt disallows cart, checkout, confirmation, tracking and the newsletter pages.
  * - `lastmod` comes from GET /seo/routes when the API is reachable; otherwise it is left out.
  *
  * Environment:
@@ -17,6 +19,7 @@ import { existsSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  INFO_PAGES,
   buildRobots,
   buildSitemap,
   normaliseSiteUrl,
@@ -63,17 +66,31 @@ async function readUpdatedAt() {
     console.warn(
       `generate-seo-files: ${apiBaseUrl}/seo/routes not available (${error instanceof Error ? error.message : error}); writing the sitemap without lastmod.`,
     );
-    return { categories: {}, products: {} };
+    return {};
   }
 }
 
 const categories = prerenderedSlugs('prodavnica');
 const products = prerenderedSlugs('proizvod');
-const updatedAt = categories.length + products.length > 0 ? await readUpdatedAt() : {};
-const entries = sitemapEntries({ categories, products, updatedAt });
+const blogCategories = prerenderedSlugs('blog/kategorija');
+const blogPosts = prerenderedSlugs('blog').filter((slug) => slug !== 'kategorija');
+const infoPages = INFO_PAGES.map((page) => page.slug).filter((slug) =>
+  existsSync(join(outDir, slug, 'index.html')),
+);
+const dynamicCount =
+  categories.length + products.length + blogCategories.length + blogPosts.length + infoPages.length;
+const updatedAt = dynamicCount > 0 ? await readUpdatedAt() : {};
+const entries = sitemapEntries({
+  categories,
+  products,
+  blogPosts,
+  blogCategories,
+  infoPages,
+  updatedAt,
+});
 
 writeFileSync(join(outDir, 'sitemap.xml'), buildSitemap(siteUrl, entries), 'utf8');
 writeFileSync(join(outDir, 'robots.txt'), buildRobots(siteUrl), 'utf8');
 console.log(
-  `generate-seo-files: sitemap.xml (${entries.length} URLs: ${categories.length} categories, ${products.length} products) and robots.txt for ${siteUrl}`,
+  `generate-seo-files: sitemap.xml (${entries.length} URLs: ${categories.length} categories, ${products.length} products, ${blogPosts.length} blog posts, ${blogCategories.length} blog categories, ${infoPages.length} info pages) and robots.txt for ${siteUrl}`,
 );

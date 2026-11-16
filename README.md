@@ -321,6 +321,27 @@ ZLADOVCE_API_BASE_URL=https://api.example.com/api/v1 ZLADOVCE_SITE_URL=https://z
 - Labels: `shared/email-labels.ts` (templates, statuses "Čeka slanje" / "Šalje se" / "Poslato" / "Neuspešno", plain-words
   errors, Serbian plurals).
 
+## Content, blog, newsletter and contact (Phase 7 – storefront)
+
+| Page | Route | Rendering |
+|---|---|---|
+| Početna | `/` | Prerendered. Texts and images from the CMS page `home` (`GET /content/pages/home`, asked for only when `/seo/routes` lists it); every null section/field keeps the default copy (`features/home/home-content.ts`). Intro and quality exist only with CMS text. Testimonials and blog previews (latest 3) only when there are some; newsletter sign-up always. |
+| O nama, Česta pitanja, Dostava i plaćanje, Politika privatnosti, Uslovi korišćenja | `/o-nama`, `/cesta-pitanja`, `/dostava-i-placanje`, `/politika-privatnosti`, `/uslovi-koriscenja` | One route `:page` (`canMatch` on `INFO_PAGES`, `features/info`). Prerendered only with content (`getPrerenderParams`: CMS pages of `/seo/routes`, FAQ items, store delivery facts). Without content: 404 view, `noindex`. Delivery falls back to the store's delivery facts. FAQ: accordion + `FAQPage` JSON-LD. |
+| Kontakt | `/kontakt` | Prerendered. Store contact details (only those set) and the contact form (honeypot `website`; 202; 409 `CONTACT_NOT_CONFIGURED` shows the API text and the phone; 429 waits). |
+| Blog, kategorija, tekst | `/blog`, `/blog/kategorija/:categorySlug`, `/blog/:slug` | Prerendered (`/blog` always; categories and posts from `/seo/routes`). Paging `?page=` client side; page 1 is canonical. Article: `BlogPosting` + `BreadcrumbList`, Open Graph `article`. |
+| Newsletter potvrda / odjava | `/newsletter/potvrda`, `/newsletter/odjava` | Client only, `noindex`, disallowed in robots. Token read from `#token=`, removed with `replaceUrl`, POSTed, never logged. |
+
+- **Conditional links** (`SiteContent`, `NavItem.requires`): "O nama", "Blog", the footer "Informacije" column and the
+  checkout terms link (`TERMS_PAGE`) appear only while the page has content. The prerender reads `/seo/routes`,
+  `/content/faq` and `/store` (so the links are in the static HTML); the browser reuses that answer while hydrating and
+  then asks the API again, so a page published or emptied after the build gains or loses its link without a rebuild. The
+  page itself is only prerendered by a build; until the rebuild, a newly published page is rendered in the browser.
+- **Header logo**: `/store` `logo` (WebP renditions) when set, otherwise the wordmark. The footer shows phone, email,
+  address and social links only when set.
+- **Sitemap/robots** (`tools/seo-files.mjs`): `/kontakt`, info pages that were prerendered, `/blog` (only with posts),
+  blog categories and posts, with `lastmod` from `/seo/routes`; robots also disallows `/newsletter/`.
+- Rich HTML (blog, CMS) is rendered with `[innerHTML]` (Angular sanitizer on top of the API's sanitiser), styled by `.rich-text`.
+
 ## Admin catalog (Phase 3)
 
 | Page | Route | Notes |

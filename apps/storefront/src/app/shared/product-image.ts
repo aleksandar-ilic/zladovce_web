@@ -5,11 +5,14 @@ import {
   computed,
   input,
 } from '@angular/core';
-import { PublicImage } from '@zladovce/models';
+import { ImageRenditions } from '@zladovce/models';
 import { imageSrc, imageSrcset } from './images';
 
+/** Any API image with renditions and its intrinsic size (product, category, blog, CMS). */
+export type SizedImage = ImageRenditions & { width: number; height: number };
+
 /**
- * Responsive product or category image (WebP renditions through `srcset`/`sizes`). The host
+ * Responsive product, category, blog or page image (WebP renditions through `srcset`/`sizes`). The host
  * decides the shape (e.g. `class="aspect-[4/5]"`); the image covers it. Images are lazy unless
  * `priority` is set (the main image above the fold).
  *
@@ -66,7 +69,7 @@ import { imageSrc, imageSrcset } from './images';
   `,
 })
 export class ProductImage {
-  readonly image = input<PublicImage | null>(null);
+  readonly image = input<SizedImage | null>(null);
   readonly alt = input('');
   /** `sizes` attribute; describe the rendered width at each breakpoint. */
   readonly sizes = input('(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw');

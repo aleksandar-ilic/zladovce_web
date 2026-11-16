@@ -1,4 +1,9 @@
-import { PublicImage, PublicProduct } from '@zladovce/models';
+import {
+  ImageRenditions,
+  PublicBlogPost,
+  PublicFaqItem,
+  PublicProduct,
+} from '@zladovce/models';
 import { renditionUrl } from '../shared/images';
 
 const SCHEMA = 'https://schema.org';
@@ -36,7 +41,7 @@ export function truncate(text: string, max = 160): string {
 }
 
 /** Largest rendition up to 1600 px – used where an absolute image URL is needed (OG, JSON-LD). */
-export function shareImageUrl(image: PublicImage | null | undefined): string | null {
+export function shareImageUrl<T extends ImageRenditions>(image: T | null | undefined): string | null {
   if (!image || image.widths.length === 0) {
     return null;
   }
@@ -93,5 +98,44 @@ export function productJsonLd(product: PublicProduct, siteUrl: string): object {
       itemCondition: `${SCHEMA}/NewCondition`,
       url,
     })),
+  };
+}
+
+const ORGANIZATION = { '@type': 'Organization', name: 'Zladovce' } as const;
+
+/** `FAQPage` from the published FAQ items (plain-text answers). */
+export function faqJsonLd(items: readonly PublicFaqItem[]): object {
+  return {
+    '@context': SCHEMA,
+    '@type': 'FAQPage',
+    mainEntity: items.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: { '@type': 'Answer', text: item.answer },
+    })),
+  };
+}
+
+/**
+ * `BlogPosting` of one article. The public API names no author, so author and publisher are
+ * the business itself.
+ */
+export function blogPostingJsonLd(post: PublicBlogPost, siteUrl: string): object {
+  const url = `${siteUrl}/blog/${post.slug}`;
+  const image = shareImageUrl(post.coverImage);
+  return {
+    '@context': SCHEMA,
+    '@type': 'BlogPosting',
+    headline: truncate(post.title, 110),
+    description: truncate(post.seoDescription || post.excerpt || htmlToText(post.contentHtml)),
+    datePublished: post.publishedAt,
+    dateModified: post.updatedAt,
+    ...(image ? { image: [image] } : {}),
+    ...(post.category ? { articleSection: post.category.name } : {}),
+    inLanguage: 'sr-Latn-RS',
+    url,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+    author: ORGANIZATION,
+    publisher: ORGANIZATION,
   };
 }

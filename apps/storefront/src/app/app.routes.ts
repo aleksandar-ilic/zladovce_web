@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
-import { HOME_DESCRIPTION, SeoData, SHOP_DESCRIPTION } from './core/seo';
+import { HOME_DESCRIPTION, HOME_TITLE, SeoData, SHOP_DESCRIPTION } from './core/seo';
+import { infoPageMatch } from './core/navigation';
 
 /**
  * Storefront routes (PROJECT_SPECIFICATION.md P1.3). Every feature is lazy loaded.
@@ -12,7 +13,7 @@ export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    title: 'Zladovce – domaći džemovi, sokovi, sirće i kompoti',
+    title: HOME_TITLE,
     data: { description: HOME_DESCRIPTION } satisfies SeoData,
     loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage),
   },
@@ -60,6 +61,50 @@ export const routes: Routes = [
     path: 'pracenje-porudzbine',
     pathMatch: 'full',
     redirectTo: 'track-order',
+  },
+  {
+    path: 'kontakt',
+    title: 'Kontakt – Zladovce',
+    data: {
+      description:
+        'Pišite porodici Zladovce: pitanja o proizvodima, porudžbinama i dostavi. Kontakt podaci i formular za poruku.',
+    } satisfies SeoData,
+    loadComponent: () => import('./features/contact/contact.page').then((m) => m.ContactPage),
+  },
+  {
+    // Blog list and category; title, description and canonical are set by the page.
+    path: 'blog',
+    loadComponent: () => import('./features/blog/blog-list.page').then((m) => m.BlogListPage),
+  },
+  {
+    path: 'blog/kategorija/:categorySlug',
+    loadComponent: () => import('./features/blog/blog-list.page').then((m) => m.BlogListPage),
+  },
+  {
+    path: 'blog/:slug',
+    loadComponent: () => import('./features/blog/blog-post.page').then((m) => m.BlogPostPage),
+  },
+  {
+    // Email links `/newsletter/potvrda#token=…`; client only, noindex, disallowed in robots.txt.
+    path: 'newsletter/potvrda',
+    title: 'Potvrda prijave – Zladovce',
+    data: { noindex: true, newsletterAction: 'confirm' },
+    loadComponent: () =>
+      import('./features/newsletter/newsletter-token.page').then((m) => m.NewsletterTokenPage),
+  },
+  {
+    path: 'newsletter/odjava',
+    title: 'Odjava – Zladovce',
+    data: { noindex: true, newsletterAction: 'unsubscribe' },
+    loadComponent: () =>
+      import('./features/newsletter/newsletter-token.page').then((m) => m.NewsletterTokenPage),
+  },
+  {
+    // O nama, Česta pitanja, Dostava i plaćanje, Politika privatnosti, Uslovi korišćenja
+    // (core/navigation.ts INFO_PAGES). Matches only those slugs; the page sets its own SEO.
+    path: ':page',
+    canMatch: [infoPageMatch],
+    loadComponent: () => import('./features/info/info.page').then((m) => m.InfoPage),
   },
   {
     path: '**',

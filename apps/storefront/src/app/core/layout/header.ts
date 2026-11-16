@@ -14,11 +14,15 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationStart, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { CartStore } from '@zladovce/shared';
 import { filter } from 'rxjs';
+import { imageSrc, imageSrcset } from '../../shared/images';
 import { CategoriesStore } from '../data/categories-store';
-import { CART_PATH, MAIN_NAV, SHOP_PATH } from '../navigation';
+import { SiteContent } from '../data/site-content';
+import { StoreSettings } from '../data/store-settings';
+import { CART_PATH, MAIN_NAV, SHOP_PATH, visibleNav } from '../navigation';
 
 /**
- * Site header: wordmark, main navigation (with a small category menu next to "Prodavnica"),
+ * Site header: store logo (the wordmark while none is set), main navigation – "O nama" and
+ * "Blog" only while they have content (SiteContent) – (with a small category menu next to "Prodavnica"),
  * cart link with item count and, on small screens, a navigation drawer. The drawer is a modal
  * dialog: focus is trapped inside it, Escape and the backdrop close it, and focus returns to
  * the menu button. Categories are loaded when a menu is first opened.
@@ -40,22 +44,35 @@ import { CART_PATH, MAIN_NAV, SHOP_PATH } from '../navigation';
       >
         <a
           routerLink="/"
-          class="rounded-sm font-serif text-3xl font-semibold tracking-tight text-olive-800 md:text-4xl"
+          class="shrink-0 rounded-sm font-serif text-3xl font-semibold tracking-tight text-olive-800 md:text-4xl"
           aria-label="Zladovce – početna strana"
         >
-          Zladovce
+          @if (logo(); as logo) {
+            <img
+              class="h-10 w-auto md:h-12"
+              [attr.src]="logo.src"
+              [attr.srcset]="logo.srcset"
+              sizes="12rem"
+              [attr.width]="logo.width"
+              [attr.height]="logo.height"
+              alt=""
+              data-testid="store-logo"
+            />
+          } @else {
+            Zladovce
+          }
         </a>
 
-        <nav class="hidden md:block" aria-label="Glavna navigacija">
-          <ul class="flex items-center gap-1">
-            @for (item of nav; track item.path) {
+        <nav class="hidden lg:block" aria-label="Glavna navigacija">
+          <ul class="flex items-center gap-0.5 xl:gap-1">
+            @for (item of nav(); track item.path) {
               <li class="relative flex items-center">
                 <a
                   [routerLink]="item.path"
                   routerLinkActive="bg-olive-100 text-olive-900"
                   [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
                   ariaCurrentWhenActive="page"
-                  class="rounded-md px-3.5 py-2 text-base font-semibold text-ink-700 transition-colors duration-150 hover:bg-olive-50 hover:text-olive-900"
+                  class="whitespace-nowrap rounded-md px-3 py-2 text-base font-semibold text-ink-700 transition-colors duration-150 hover:bg-olive-50 hover:text-olive-900"
                 >
                   {{ item.label }}
                 </a>
@@ -161,7 +178,7 @@ import { CART_PATH, MAIN_NAV, SHOP_PATH } from '../navigation';
           <button
             #menuButton
             type="button"
-            class="inline-flex size-11 cursor-pointer items-center justify-center rounded-md text-olive-800 transition-colors duration-150 hover:bg-olive-100 md:hidden"
+            class="inline-flex size-11 cursor-pointer items-center justify-center rounded-md text-olive-800 transition-colors duration-150 hover:bg-olive-100 lg:hidden"
             aria-label="Otvori meni"
             aria-haspopup="dialog"
             [attr.aria-expanded]="menuOpen()"
@@ -185,7 +202,7 @@ import { CART_PATH, MAIN_NAV, SHOP_PATH } from '../navigation';
     </div>
 
     @if (menuOpen()) {
-      <div class="fixed inset-0 z-50 md:hidden">
+      <div class="fixed inset-0 z-50 lg:hidden">
         <div
           class="absolute inset-0 bg-olive-900/40"
           aria-hidden="true"
@@ -225,7 +242,7 @@ import { CART_PATH, MAIN_NAV, SHOP_PATH } from '../navigation';
           </div>
           <nav class="flex-1 overflow-y-auto px-3 py-4" aria-label="Glavna navigacija">
             <ul class="flex flex-col gap-1">
-              @for (item of nav; track item.path) {
+              @for (item of nav(); track item.path) {
                 <li>
                   <a
                     [routerLink]="item.path"
@@ -287,7 +304,16 @@ export class Header {
   private readonly menuButton = viewChild.required<ElementRef<HTMLButtonElement>>('menuButton');
   private readonly categoriesButton = viewChild<ElementRef<HTMLButtonElement>>('categoriesButton');
 
-  protected readonly nav = MAIN_NAV;
+  private readonly siteContent = inject(SiteContent);
+  private readonly store = inject(StoreSettings);
+
+  protected readonly nav = computed(() => visibleNav(MAIN_NAV, this.siteContent.available()));
+  protected readonly logo = computed(() => {
+    const logo = this.store.settings()?.logo;
+    return logo && logo.widths.length > 0
+      ? { src: imageSrc(logo, 400), srcset: imageSrcset(logo), width: logo.width, height: logo.height }
+      : null;
+  });
   protected readonly cartPath = CART_PATH;
   protected readonly shopPath = SHOP_PATH;
   protected readonly menuOpen = signal(false);
@@ -298,6 +324,7 @@ export class Header {
   protected readonly cartLabel = computed(() => `Korpa, broj proizvoda: ${this.cartCount()}`);
 
   constructor() {
+    this.siteContent.ensureLoaded();
     // The page behind the open drawer must not scroll.
     effect(() => {
       this.document.body.style.overflow = this.menuOpen() ? 'hidden' : '';

@@ -28,6 +28,7 @@ import { RsdPipe } from '@zladovce/utilities';
 import { CartQuoteService } from '../../core/cart/cart-quote.service';
 import { checkoutBlockedReason, shippingText } from '../../core/cart/cart-summary';
 import { OrdersApi } from '../../core/data/orders-api';
+import { SiteContent } from '../../core/data/site-content';
 import { CART_PATH, ORDER_CONFIRMATION_PATH, TERMS_PAGE } from '../../core/navigation';
 import {
   buildOrderRequest,
@@ -341,7 +342,7 @@ import { CheckoutSession } from './checkout-session';
                     data-testid="acceptedTerms"
                   />
                   <span>
-                    @if (termsPage; as terms) {
+                    @if (termsPage(); as terms) {
                       Prihvatam
                       <a
                         [routerLink]="terms.path"
@@ -401,7 +402,11 @@ export class CheckoutPage {
   protected readonly messages = CHECKOUT_MESSAGES;
   protected readonly phoneExample = PHONE_EXAMPLE;
   protected readonly cartPath = CART_PATH;
-  protected readonly termsPage = TERMS_PAGE;
+  private readonly siteContent = inject(SiteContent);
+  /** The terms link only while the terms page has content (never a dead link). */
+  protected readonly termsPage = computed(() =>
+    TERMS_PAGE.requires && !this.siteContent.has(TERMS_PAGE.requires) ? null : TERMS_PAGE,
+  );
 
   readonly form = createCheckoutForm(inject(FormBuilder), this.session.readDraft());
   /** The key sent with this submission and every retry of it. */
@@ -431,6 +436,7 @@ export class CheckoutPage {
   );
 
   constructor() {
+    this.siteContent.ensureLoaded();
     this.quotes.watch();
     // A fresh quote every time the checkout opens, even when the cart page priced it a moment ago.
     // (Without a quote yet, watch() requests the first one itself.)

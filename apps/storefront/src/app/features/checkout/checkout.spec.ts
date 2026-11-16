@@ -225,6 +225,36 @@ describe('CheckoutPage', () => {
     expect(text(ctx.el('submit'))).toBe('Poruči');
   });
 
+  it('links the terms label to /uslovi-koriscenja only while the terms page has content', async () => {
+    const ctx = await openPriced();
+    const routesResponse = (pages: { key: string; updatedAt: string }[]) => ({
+      categories: [],
+      products: [],
+      blogPosts: [],
+      blogCategories: [],
+      pages,
+    });
+    ctx.http
+      .expectOne(`${API}/seo/routes`)
+      .flush(routesResponse([{ key: 'privacy', updatedAt: '2026-11-15T10:00:00Z' }]));
+    await ctx.render();
+    const label = () => ctx.el('acceptedTerms')!.closest('label')!;
+    expect(label().querySelector('a')).toBeNull();
+    TestBed.resetTestingModule();
+
+    putCart();
+    const withTerms = await open();
+    await withTerms.render();
+    withTerms.quotes()[0]!.flush(quote([quoteLine()]));
+    withTerms.http
+      .expectOne(`${API}/seo/routes`)
+      .flush(routesResponse([{ key: 'terms', updatedAt: '2026-11-15T10:00:00Z' }]));
+    await withTerms.render();
+    const link = withTerms.el('acceptedTerms')!.closest('label')!.querySelector('a');
+    expect(link?.getAttribute('href')).toBe('/uslovi-koriscenja');
+    expect(text(link)).toBe('uslove kupovine');
+  });
+
   it('validates names, e-mail, phone, postal code and terms before sending', async () => {
     const ctx = await openPriced();
     await ctx.submit();

@@ -7,7 +7,14 @@ import { App } from './app';
 import { routes } from './app.routes';
 import { RenderMode } from '@angular/ssr';
 import { serverRoutes } from './app.routes.server';
-import { CART_PATH, FOOTER_NAV, MAIN_NAV } from './core/navigation';
+import {
+  CART_PATH,
+  FOOTER_INFO_NAV,
+  FOOTER_NAV,
+  INFO_PAGES,
+  MAIN_NAV,
+  visibleNav,
+} from './core/navigation';
 import { deliveryFacts } from './features/home/home.page';
 import {
   API,
@@ -28,6 +35,9 @@ async function renderApp() {
   await fixture.whenStable();
   return { fixture, root: fixture.nativeElement as HTMLElement };
 }
+
+/** Links shown before (and without) any optional content. */
+const ALWAYS_MAIN = visibleNav(MAIN_NAV, new Set());
 
 const text = (element: Element | null): string =>
   element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
@@ -57,7 +67,7 @@ describe('storefront shell', () => {
   it('builds the main navigation from the config and marks the current page', async () => {
     const { root } = await renderApp();
     const links = [...root.querySelectorAll('sf-header nav[aria-label="Glavna navigacija"] a')];
-    expect(links.map(text)).toEqual(MAIN_NAV.map((item) => item.label));
+    expect(links.map(text)).toEqual(ALWAYS_MAIN.map((item) => item.label));
     expect(links[0]?.getAttribute('href')).toBe('/');
     expect(links[0]?.getAttribute('aria-current')).toBe('page');
   });
@@ -101,7 +111,7 @@ describe('storefront shell', () => {
     expect(document.body.style.overflow).toBe('hidden');
     expect(
       [...(dialog?.querySelectorAll('nav a') ?? [])].map((a) => a.getAttribute('href')),
-    ).toEqual([...MAIN_NAV.map((item) => item.path), CART_PATH]);
+    ).toEqual([...ALWAYS_MAIN.map((item) => item.path), CART_PATH]);
 
     dialog?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     fixture.detectChanges();
@@ -152,7 +162,7 @@ describe('storefront shell', () => {
     const { root } = await renderApp();
     const footer = root.querySelector('sf-footer');
     expect([...(footer?.querySelectorAll('nav a') ?? [])].map(text)).toEqual(
-      FOOTER_NAV.map((i) => i.label),
+      visibleNav(FOOTER_NAV, new Set()).map((i) => i.label),
     );
     expect(text(footer ?? null)).toContain(`© ${new Date().getFullYear()} Zladovce`);
     expect(text(footer ?? null)).not.toMatch(/@|\+381|tel\.|telefon/i);
@@ -166,19 +176,110 @@ describe('navigation config', () => {
     return (harness.routeNativeElement as HTMLElement).tagName.toLowerCase();
   };
 
-  it.each([...new Set([...MAIN_NAV, ...FOOTER_NAV].map((item) => item.path)), CART_PATH])(
+  it.each([
+    ...new Set([...MAIN_NAV, ...FOOTER_NAV, ...FOOTER_INFO_NAV].map((item) => item.path)),
+    CART_PATH,
+  ])(
     'menu link %s leads to an existing page',
     async (path) => {
       expect(await resolves(path)).not.toBe('sf-not-found-page');
     },
   );
 
-  it('contains only pages that exist in this phase', () => {
-    expect(MAIN_NAV.map((item) => item.label)).toEqual([
+  it('contains only pages that exist; optional pages require their content', () => {
+    expect(MAIN_NAV.map((item) => [item.label, item.requires ?? null])).toEqual([
+      ['Početna', null],
+      ['Prodavnica', null],
+      ['O nama', 'about'],
+      ['Blog', 'blog'],
+      ['Kontakt', null],
+      ['Praćenje porudžbine', null],
+    ]);
+    expect(FOOTER_INFO_NAV.map((item) => [item.path, item.requires])).toEqual([
+      ['/cesta-pitanja', 'faq'],
+      ['/dostava-i-placanje', 'delivery'],
+      ['/politika-privatnosti', 'privacy'],
+      ['/uslovi-koriscenja', 'terms'],
+    ]);
+    // Every informational page is reachable from the header or the footer.
+    const linked = new Set([...MAIN_NAV, ...FOOTER_INFO_NAV].map((item) => item.path));
+    for (const page of INFO_PAGES) {
+      expect(linked.has(`/${page.slug}`)).toBe(true);
+    }
+  });
+});
+
+describe('conditional navigation links', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('shows optional pages in header and footer only while they have content, refreshed from the API', async () => {
+    const { fixture, root } = await renderApp();
+    const http = TestBed.inject(HttpTestingController);
+    const headerLinks = () =>
+      [...root.querySelectorAll('sf-header nav[aria-label="Glavna navigacija"] a')].map(text);
+    const footerInfo = () =>
+      [...root.querySelectorAll('sf-footer [data-testid="footer-info"] a')].map(text);
+
+    // Nothing known yet: only pages that always exist.
+    expect(headerLinks()).toEqual(['Početna', 'Prodavnica', 'Kontakt', 'Praćenje porudžbine']);
+    expect(root.querySelector('[data-testid="footer-info"]')).toBeNull();
+
+    http.expectOne(`${API}/seo/routes`).flush({
+      categories: [],
+      products: [],
+      blogPosts: [{ slug: 'prvi-tekst', updatedAt: '2026-11-15T10:00:00Z' }],
+      blogCategories: [],
+      pages: [
+        { key: 'about', updatedAt: '2026-11-15T10:00:00Z' },
+        { key: 'terms', updatedAt: '2026-11-15T10:00:00Z' },
+      ],
+    });
+    http
+      .expectOne(`${API}/content/faq`)
+      .flush({ items: [{ id: 'f1', question: 'Kako plaćam?', answer: 'Pouzećem.' }] });
+    http.expectOne(`${API}/store`).flush({
+      ...STORE,
+      contact: { email: 'prodaja@example.com', phone: '+381 64 000 0000', address: null },
+    });
+    await settle(() => fixture.detectChanges());
+
+    expect(headerLinks()).toEqual([
       'Početna',
       'Prodavnica',
+      'O nama',
+      'Blog',
+      'Kontakt',
       'Praćenje porudžbine',
     ]);
+    // No privacy page and no delivery facts (shipping price 0): those stay unlinked.
+    expect(footerInfo()).toEqual(['Česta pitanja', 'Uslovi korišćenja']);
+    const contact = root.querySelector('[data-testid="footer-contact"]');
+    expect(contact?.querySelector('a[href="tel:+381640000000"]')).not.toBeNull();
+    expect(contact?.querySelector('a[href="mailto:prodaja@example.com"]')).not.toBeNull();
+  });
+
+  it('uses the store logo in the header when one is set', async () => {
+    const { fixture, root } = await renderApp();
+    TestBed.inject(HttpTestingController)
+      .expectOne(`${API}/store`)
+      .flush({
+        ...STORE,
+        logo: {
+          key: 'logos/l1',
+          baseUrl: 'http://localhost:9000/media/logos/l1',
+          widths: [400, 800],
+          width: 800,
+          height: 300,
+          emailPngUrl: 'http://localhost:9000/media/logos/l1/email.png',
+        },
+      });
+    await settle(() => fixture.detectChanges());
+    const home = root.querySelector('sf-header a[routerLink="/"]');
+    const logo = home?.querySelector('img');
+    expect(logo?.getAttribute('src')).toBe('http://localhost:9000/media/logos/l1/400.webp');
+    expect(logo?.getAttribute('alt')).toBe('');
+    expect(home?.getAttribute('aria-label')).toBe('Zladovce – početna strana');
+    expect(text(home ?? null)).toBe('');
   });
 });
 
@@ -305,6 +406,18 @@ describe('render modes', () => {
     expect(mode('korpa')).toBe(RenderMode.Client);
     expect(mode('porucivanje')).toBe(RenderMode.Client);
     expect(mode('porudzbina-primljena')).toBe(RenderMode.Client);
+  });
+
+  it('prerenders contact, blog and informational pages; newsletter links are client only', () => {
+    const route = (path: string) => serverRoutes.find((r) => r.path === path);
+    for (const path of ['kontakt', 'blog', 'blog/:slug', 'blog/kategorija/:categorySlug', ':page']) {
+      expect(route(path)?.renderMode).toBe(RenderMode.Prerender);
+    }
+    for (const path of ['blog/:slug', 'blog/kategorija/:categorySlug', ':page']) {
+      expect(route(path)).toHaveProperty('getPrerenderParams');
+    }
+    expect(route('newsletter/potvrda')?.renderMode).toBe(RenderMode.Client);
+    expect(route('newsletter/odjava')?.renderMode).toBe(RenderMode.Client);
   });
 });
 
